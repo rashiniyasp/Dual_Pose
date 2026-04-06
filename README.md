@@ -91,19 +91,13 @@ If you use this code or data, please cite:
 
 
 @InProceedings{Verma2020Yoga82,
-  author    = {Manisha Verma and Sudhakar Kumawat and Yuta Nakashima and Shanmuganathan Raman},
-  title     = {Yoga-82: A New Dataset for Fine-grained Classification of Human Poses},
-  booktitle = {CVPRW},
-  year      = {2020},
+  author    = {Radhi Niyas P., H. Tiwari, and Tushar Shinde},
+  title     = {Dual-branch Unified Aggregation for Latent Pose Representation},
+  booktitle = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshop},
+  year      = {2026},
 }
 
-@misc{Bazarevsky2020BlazePose,
-  title         = {BlazePose: On-device Real-time Body Pose tracking},
-  author        = {Valentin Bazarevsky and others},
-  year          = {2020},
-  eprint        = {2006.10204},
-  archivePrefix = {arXiv},
-}
+
 ```
 
 ## License
