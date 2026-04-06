@@ -1,0 +1,19 @@
+# Data & checkpoints (too large for git — use Kaggle link)
+skeletons/
+checkpoints/
+*.pth
+*.npy
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+
+# Editor
+.vscode/
+.idea/
+
+# Results (optional — keep or remove)
+results/
