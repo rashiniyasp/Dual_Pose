@@ -1,11 +1,6 @@
 # DUAL-Pose: Efficient Dual-Branch Graph Networks for Skeleton-Based Yoga Pose Recognition
 
 **Accepted at CVPR Workshops 2026**
-
-> Rashi Niyas P, Hitika Tiwari, Tushar Shinde  
-> IIT Madras Zanzibar  
-> `{zda24m005, hitika, shinde}@iitmz.ac.in`
-
 ---
 
 ## Overview
