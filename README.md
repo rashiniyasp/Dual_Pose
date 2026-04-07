@@ -14,6 +14,8 @@ It combines:
 | **MLP branch** | 113-D geometric features | Global bone angles & joint relations |
 
 Both branches process **16 synthetic yaw-rotated views** of each pose, aggregated via learned attention weights.
+<img width="997" height="1526" alt="image" src="https://github.com/user-attachments/assets/3b616f97-dd1a-4c3c-9a17-2ac3eec908d2" />
+
 
 ## Results
 
