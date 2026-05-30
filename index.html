@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DA² — Dataset-Aware Adaptive Augmentation for FSCIL</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ── TOKENS ─────────────────────────────────────────────────────── */
+:root {
+  --navy:      #0c4782;
+  --navy-dark: #081f3a;
+  --gold:      #c68f20;
+  --gold-lt:   #e8b84b;
+  --cream:     #f8f5ee;
+  --cream-dk:  #ede9df;
+  --muted:     #6b7080;
+  --text:      #1a1e2b;
+  --white:     #ffffff;
+  --rule:      rgba(12,71,130,0.18);
+  --shadow-sm: 0 2px 8px rgba(12,71,130,0.07);
+  --shadow-md: 0 8px 32px rgba(12,71,130,0.11);
+  --shadow-lg: 0 20px 60px rgba(12,71,130,0.14);
+  --radius:    4px;
+  --serif:     'EB Garamond', Georgia, serif;
+  --sans:      'DM Sans', system-ui, sans-serif;
+  --mono:      'DM Mono', monospace;
+}
+
+/* ── RESET ───────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  font-size: 16px;
+  color: var(--text);
+  background: var(--cream);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── NOISE OVERLAY ───────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+  opacity: .6;
+}
+
+/* ── HEADER ──────────────────────────────────────────────────────── */
+header {
+  background: var(--navy-dark);
+  color: var(--white);
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.header-rule {
+  height: 4px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-lt), var(--gold));
+}
+
+.header-inner {
+  max-width: 900px;
+  margin: auto;
+  padding: 72px 32px 56px;
+  position: relative;
+  z-index: 2;
+}
+
+/* subtle grid lines behind header */
+header::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
+
+.venue-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gold-lt);
+  border: 1px solid rgba(198,143,32,.4);
+  padding: 4px 10px;
+  border-radius: 2px;
+  margin-bottom: 20px;
+}
+
+h1 {
+  font-family: var(--serif);
+  font-size: clamp(26px, 4.5vw, 46px);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+  color: var(--white);
+  margin-bottom: 16px;
+}
+
+h1 .da2 {
+  color: var(--gold-lt);
+  font-style: italic;
+}
+
+.header-subtitle {
+  font-size: 16px;
+  color: rgba(255,255,255,.62);
+  max-width: 680px;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 36px;
+}
+
+.badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 2px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.8);
+}
+
+.sota-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(90deg, rgba(198,143,32,.18), rgba(198,143,32,.08));
+  border: 1px solid rgba(198,143,32,.35);
+  border-radius: 3px;
+  padding: 10px 20px;
+}
+
+.sota-strip .sota-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gold-lt);
+}
+
+.sota-strip .sota-numbers {
+  font-family: var(--serif);
+  font-size: 18px;
+  color: var(--white);
+}
+
+.sota-strip .sota-numbers em { color: var(--gold-lt); font-style: normal; font-weight: 500; }
+
+/* ── NAV PILL ────────────────────────────────────────────────────── */
+.nav {
+  background: var(--navy);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.nav-inner {
+  max-width: 900px;
+  margin: auto;
+  padding: 0 32px;
+  display: flex;
+  gap: 0;
+}
+
+.nav a {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.55);
+  text-decoration: none;
+  padding: 14px 18px;
+  border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s;
+}
+
+.nav a:hover {
+  color: var(--gold-lt);
+  border-bottom-color: var(--gold);
+}
+
+/* ── LAYOUT ──────────────────────────────────────────────────────── */
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 0 32px 80px;
+}
+
+/* ── SECTIONS ────────────────────────────────────────────────────── */
+section {
+  padding-top: 64px;
+}
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+
+h2 {
+  font-family: var(--serif);
+  font-size: clamp(20px, 3vw, 30px);
+  font-weight: 500;
+  color: var(--navy);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+  line-height: 1.25;
+}
+
+h3 {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+
+p {
+  color: #2e3240;
+  line-height: 1.75;
+  font-size: 15.5px;
+}
+
+/* ── ABSTRACT ────────────────────────────────────────────────────── */
+.abstract-box {
+  background: var(--white);
+  border-left: 3px solid var(--navy);
+  padding: 28px 32px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── FIGURE ──────────────────────────────────────────────────────── */
+.figure-wrap {
+  margin: 28px 0;
+  background: var(--white);
+  border: 1px solid var(--cream-dk);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.figure-wrap img {
+  width: 100%;
+  display: block;
+}
+
+.figure-caption {
+  padding: 14px 20px;
+  font-size: 13.5px;
+  color: var(--muted);
+  border-top: 1px solid var(--cream-dk);
+  font-style: italic;
+  line-height: 1.55;
+}
+
+.figure-caption strong {
+  color: var(--navy);
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* ── METHODS GRID ────────────────────────────────────────────────── */
+.methods-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.method-card {
+  background: var(--white);
+  border: 1px solid var(--cream-dk);
+  border-top: 3px solid var(--navy);
+  border-radius: var(--radius);
+  padding: 22px 20px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s, box-shadow .2s;
+}
+
+.method-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.method-card:nth-child(2) { border-top-color: var(--gold); }
+.method-card:nth-child(3) { border-top-color: #5b8db8; }
+
+.method-icon {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+/* ── RESULTS METRICS ─────────────────────────────────────────────── */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.metric-card {
+  background: var(--white);
+  border: 1px solid var(--cream-dk);
+  border-radius: var(--radius);
+  padding: 24px 20px 20px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--navy), var(--gold));
+}
+
+.metric-dataset {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-family: var(--serif);
+  font-size: 38px;
+  color: var(--navy);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.metric-delta {
+  font-size: 13px;
+  color: var(--gold);
+  font-weight: 500;
+  font-family: var(--mono);
+}
+
+/* ── TABLES ──────────────────────────────────────────────────────── */
+.table-wrap {
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--cream-dk);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: var(--white);
+  min-width: 700px;
+}
+
+thead tr:first-child th {
+  background: var(--navy);
+  color: var(--white);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 13px 10px;
+  font-weight: 400;
+  text-align: center;
+  border: none;
+}
+
+thead tr:first-child th:first-child { text-align: left; padding-left: 16px; }
+
+thead tr:last-child th {
+  background: #e8f0f8;
+  color: var(--navy);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .06em;
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 2px solid var(--navy);
+  font-weight: 500;
+}
+
+tbody tr { border-bottom: 1px solid #eee; }
+tbody tr:last-child { border-bottom: none; }
+
+tbody tr:nth-child(even) td { background: #f9fafc; }
+tbody tr:hover td { background: #eef4fb; }
+
+tbody td {
+  padding: 9px 10px;
+  text-align: center;
+  color: var(--text);
+  font-size: 13px;
+}
+
+tbody td:first-child {
+  text-align: left;
+  padding-left: 16px;
+  font-size: 13.5px;
+  color: var(--navy-dark);
+  font-weight: 400;
+}
+
+/* Our row */
+tr.ours td {
+  background: linear-gradient(90deg, rgba(198,143,32,.08), rgba(12,71,130,.06)) !important;
+  font-weight: 600;
+  color: var(--navy-dark);
+}
+
+tr.ours td:first-child {
+  color: var(--navy);
+  font-family: var(--serif);
+  font-size: 14.5px;
+}
+
+.best { color: var(--gold); font-weight: 700; }
+
+.table-caption {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+  background: var(--cream-dk);
+  border-top: 1px solid var(--cream-dk);
+  line-height: 1.5;
+}
+
+.table-caption strong { font-style: normal; color: var(--navy); }
+
+/* ── TSNE PAIR ───────────────────────────────────────────────────── */
+.tsne-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.tsne-item {
+  background: var(--white);
+  border: 1px solid var(--cream-dk);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.tsne-item img { width: 100%; display: block; }
+
+.tsne-label {
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-top: 1px solid var(--cream-dk);
+  text-align: center;
+}
+
+.tsne-label.ours { color: var(--navy); background: #f0f5fb; }
+
+/* ── CONCLUSION / FOOTER ─────────────────────────────────────────── */
+.conclusion-box {
+  background: var(--navy-dark);
+  color: rgba(255,255,255,.85);
+  padding: 40px 40px 36px;
+  border-radius: var(--radius);
+  position: relative;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.conclusion-box::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-lt), var(--gold));
+}
+
+.conclusion-box p {
+  color: rgba(255,255,255,.78);
+  font-size: 15.5px;
+  line-height: 1.75;
+}
+
+footer {
+  background: var(--navy-dark);
+  text-align: center;
+  padding: 28px 32px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: rgba(255,255,255,.35);
+  margin-top: 64px;
+  border-top: 1px solid rgba(255,255,255,.05);
+}
+
+/* ── FADE-IN ANIMATION ───────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up { animation: fadeUp .6s ease both; }
+.fade-up:nth-child(2) { animation-delay: .1s; }
+.fade-up:nth-child(3) { animation-delay: .2s; }
+
+/* ── RESPONSIVE ──────────────────────────────────────────────────── */
+@media (max-width: 680px) {
+  .header-inner { padding: 48px 20px 40px; }
+  .container { padding: 0 20px 60px; }
+  .methods-grid, .metrics-row { grid-template-columns: 1fr; }
+  .tsne-pair { grid-template-columns: 1fr; }
+  .nav-inner { overflow-x: auto; }
+  h1 { font-size: 24px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────────────── -->
+<div class="header-rule"></div>
+<header>
+  <div class="header-inner fade-up">
+    <div class="venue-tag">2026 Submission</div>
+
+    <h1>
+      <span class="da2">DA²</span>: Dataset-Aware Adaptive Augmentation<br>
+      for Few-Shot Class-Incremental Learning
+    </h1>
+
+    <p class="header-subtitle">
+      Multi-domain feature enrichment via spatial mixing, frequency-domain perturbation,
+      and controlled noise — with automatic coarse/fine-grained regime detection.
+    </p>
+
+    <div class="badges">
+      <span class="badge">FSCIL</span>
+      <span class="badge">Feature Augmentation</span>
+      <span class="badge">Representation Learning</span>
+      <span class="badge">Fourier Perturbation</span>
+      <span class="badge">Continual Learning</span>
+    </div>
+
+    <div class="sota-strip">
+      <div>
+        <div class="sota-label">State of the Art</div>
+        <div class="sota-numbers">
+          miniImageNet <em>+8.09%</em> &nbsp;·&nbsp;
+          CIFAR-100 <em>+6.10%</em> &nbsp;·&nbsp;
+          CUB-200 <em>+0.04%</em>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── NAV ─────────────────────────────────────────────────────────── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#abstract">Abstract</a>
+    <a href="#framework">Framework</a>
+    <a href="#method">Method</a>
+    <a href="#results">Results</a>
+    <a href="#visualization">Analysis</a>
+    <a href="#conclusion">Conclusion</a>
+  </div>
+</nav>
+
+<!-- ── CONTENT ─────────────────────────────────────────────────────── -->
+<div class="container">
+
+  <!-- ABSTRACT -->
+  <section id="abstract">
+    <div class="section-label">§ 1</div>
+    <h2>Abstract</h2>
+    <div class="abstract-box">
+      <p>
+        Few-shot class-incremental learning (FSCIL) aims to enable models to continually
+        learn new classes from limited data while retaining performance on previously learned
+        ones. Existing approaches typically freeze the feature extractor during incremental
+        updates, but do not explicitly ensure that base-class representations remain
+        sufficiently separable. As a result, features of newly introduced classes may overlap
+        with those of earlier classes.
+      </p>
+      <br>
+      <p>
+        We propose <strong>Dataset-Aware Adaptive Augmentation (DA²)</strong>, a feature-level
+        augmentation strategy that strengthens and diversifies base-class feature distributions
+        prior to incremental learning. Our method generates multi-domain augmented features
+        through (i) spatial mixing, (ii) frequency-domain perturbations, and (iii) controlled
+        noise. Crucially, we compute the mean inter-class cosine similarity of base-class
+        prototypes in a single forward pass and adapt the augmentation regime accordingly —
+        applying the full multi-domain pipeline for coarse-grained datasets and a
+        spatial-only regime for fine-grained ones. Experiments on CIFAR-100, miniImageNet,
+        and CUB-200 demonstrate average accuracy gains of <strong>+8.09%</strong>,
+        <strong>+6.10%</strong>, and <strong>+0.04%</strong> over prior best methods.
+      </p>
+    </div>
+  </section>
+
+  <!-- FRAMEWORK FIGURE -->
+  <section id="framework">
+    <div class="section-label">§ 2</div>
+    <h2>Framework Overview</h2>
+    <div class="figure-wrap">
+      <img src="bb_nn.png?v=20260504" alt="DA² Framework Overview">
+      <div class="figure-caption">
+        <strong>Figure 1 &nbsp;·&nbsp;</strong>
+        Overview of the DA² framework. A single augmentation-free forward pass estimates
+        inter-class prototype similarity to select between coarse-grained and fine-grained
+        regimes. The coarse-grained branch applies spatial mixing, spectrum swapping, and
+        noise injection; the fine-grained branch applies spatial-only mixing.
+      </div>
+    </div>
+  </section>
+
+  <!-- METHOD -->
+  <section id="method">
+    <div class="section-label">§ 3</div>
+    <h2>Core Method</h2>
+
+    <div class="methods-grid">
+      <div class="method-card fade-up">
+        <div class="method-icon">01 &nbsp; Spatial</div>
+        <h3>Spatial Mixing</h3>
+        <p>
+          Interpolates feature embeddings of odd-indexed batch samples with randomly
+          paired peers at λ = 0.5, increasing intra-class geometric diversity within
+          the convex hull of each class — without displacing cluster centres.
+        </p>
+      </div>
+
+      <div class="method-card fade-up">
+        <div class="method-icon">02 &nbsp; Spectral</div>
+        <h3>Frequency Perturbation</h3>
+        <p>
+          Replaces the Fourier spectrum of spatially-mixed embeddings with that of a
+          randomly permuted batch peer, scaled by β = 0.5. Finite-precision FFT
+          introduces deterministic, non-invertible perturbations
+          unavailable through spatial blending alone.
+        </p>
+      </div>
+
+      <div class="method-card fade-up">
+        <div class="method-icon">03 &nbsp; Stochastic</div>
+        <h3>Noise Injection</h3>
+        <p>
+          Small isotropic Gaussian noise (σ = 0.02) is added before ℓ₂-normalisation,
+          ensuring every proxy embedding is geometrically compatible with the
+          cosine classifier and lies on the unit hypersphere 𝕊^{D−1}.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="results">
+    <div class="section-label">§ 4</div>
+    <h2>Quantitative Results</h2>
+
+    <div class="metrics-row">
+      <div class="metric-card">
+        <div class="metric-dataset">miniImageNet</div>
+        <div class="metric-value">78.86%</div>
+        <div class="metric-delta">↑ +8.09% vs. prior SOTA</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-dataset">CIFAR-100</div>
+        <div class="metric-value">76.50%</div>
+        <div class="metric-delta">↑ +6.10% vs. prior SOTA</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-dataset">CUB-200</div>
+        <div class="metric-value">70.98%</div>
+        <div class="metric-delta">↑ +0.04% · fine-grained regime</div>
+      </div>
+    </div>
+
+    <!-- miniImageNet Table -->
+    <p style="margin-bottom:12px; font-size:14px; color:var(--muted); font-family:var(--mono); letter-spacing:.06em; text-transform:uppercase;">
+      Table 1 &nbsp;—&nbsp; miniImageNet
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th colspan="9">Accuracy per Session (%) ↑</th>
+            <th>Avg. Acc.</th>
+            <th>ΔFI</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th>S0</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th>
+            <th>S5</th><th>S6</th><th>S7</th><th>S8</th>
+            <th></th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Finetune</td><td>61.31</td><td>27.22</td><td>16.37</td><td>6.08</td><td>2.54</td><td>1.56</td><td>1.93</td><td>2.60</td><td>1.40</td><td>13.45</td><td>—</td></tr>
+          <tr><td>iCaRL</td><td>61.31</td><td>46.32</td><td>42.94</td><td>37.63</td><td>30.49</td><td>24.00</td><td>20.89</td><td>18.80</td><td>17.21</td><td>33.29</td><td>+15.81</td></tr>
+          <tr><td>EEIL</td><td>61.31</td><td>46.58</td><td>44.00</td><td>37.29</td><td>33.14</td><td>27.12</td><td>24.10</td><td>21.57</td><td>19.58</td><td>34.97</td><td>+18.18</td></tr>
+          <tr><td>TOPIC</td><td>61.31</td><td>50.09</td><td>45.17</td><td>41.16</td><td>37.48</td><td>35.52</td><td>32.19</td><td>29.46</td><td>24.42</td><td>39.64</td><td>+23.02</td></tr>
+          <tr><td>F2M</td><td>67.28</td><td>63.80</td><td>60.38</td><td>57.06</td><td>54.08</td><td>51.39</td><td>48.82</td><td>46.58</td><td>44.65</td><td>54.89</td><td>+43.25</td></tr>
+          <tr><td>CEC</td><td>72.00</td><td>66.83</td><td>62.97</td><td>59.43</td><td>56.70</td><td>53.73</td><td>51.19</td><td>49.24</td><td>47.63</td><td>57.75</td><td>+46.23</td></tr>
+          <tr><td>FACT</td><td>72.56</td><td>69.63</td><td>66.38</td><td>62.77</td><td>60.60</td><td>57.33</td><td>54.34</td><td>52.16</td><td>50.49</td><td>60.70</td><td>+49.09</td></tr>
+          <tr><td>TEEN</td><td>73.53</td><td>70.55</td><td>66.37</td><td>63.23</td><td>60.53</td><td>57.95</td><td>55.24</td><td>53.44</td><td>52.08</td><td>61.43</td><td>+50.68</td></tr>
+          <tr><td>SAGG</td><td>78.77</td><td>74.75</td><td>71.20</td><td>68.12</td><td>65.16</td><td>62.10</td><td>59.22</td><td>57.28</td><td>56.19</td><td>65.89</td><td>+54.79</td></tr>
+          <tr><td>ALICE</td><td>80.60</td><td>70.60</td><td>67.40</td><td>64.50</td><td>62.50</td><td>60.00</td><td>57.80</td><td>56.80</td><td>55.70</td><td>63.99</td><td>+54.30</td></tr>
+          <tr><td>SAVC</td><td>81.12</td><td>76.14</td><td>72.43</td><td>68.92</td><td>66.48</td><td>62.95</td><td>59.92</td><td>58.39</td><td>57.11</td><td>67.05</td><td>+55.71</td></tr>
+          <tr><td>MICS</td><td>84.40</td><td>79.48</td><td>75.09</td><td>71.40</td><td>68.89</td><td><u>66.16</u></td><td><u>63.57</u></td><td><u>61.79</u></td><td><u>60.74</u></td><td>70.17</td><td>+59.34</td></tr>
+          <tr><td>FACL</td><td><u>86.68</u></td><td><u>81.49</u></td><td><u>76.65</u></td><td><u>72.65</u></td><td><u>69.71</u></td><td>66.02</td><td>63.08</td><td>61.17</td><td>59.48</td><td><u>70.77</u></td><td>+58.08</td></tr>
+          <tr><td>Flexi-FSCIL</td><td>77.37</td><td>74.96</td><td>70.73</td><td>66.50</td><td>63.95</td><td>62.44</td><td>61.49</td><td>60.29</td><td>59.69</td><td>66.38</td><td><u>+58.29</u></td></tr>
+          <tr class="ours">
+            <td><strong>DA² (Ours)</strong></td>
+            <td class="best">96.78</td><td class="best">91.54</td><td class="best">85.73</td><td class="best">81.04</td><td class="best">77.59</td>
+            <td class="best">73.78</td><td class="best">70.18</td><td class="best">67.87</td><td class="best">65.22</td>
+            <td class="best">78.86</td><td class="best">+63.82</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="table-caption">
+        <strong>ΔFI</strong> — final-session accuracy gain over fine-tuning.
+        <strong>Underline</strong> — second best. 
+      </div>
+    </div>
+
+    <!-- CIFAR-100 Table -->
+    <p style="margin: 32px 0 12px; font-size:14px; color:var(--muted); font-family:var(--mono); letter-spacing:.06em; text-transform:uppercase;">
+      Table 2 &nbsp;—&nbsp; CIFAR-100
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th colspan="9">Accuracy per Session (%) ↑</th>
+            <th>Avg. Acc.</th>
+            <th>ΔFI</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th>S0</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th>
+            <th>S5</th><th>S6</th><th>S7</th><th>S8</th>
+            <th></th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Finetune</td><td>64.10</td><td>39.61</td><td>15.37</td><td>9.80</td><td>6.67</td><td>3.80</td><td>3.70</td><td>3.14</td><td>2.65</td><td>16.54</td><td>—</td></tr>
+          <tr><td>iCaRL</td><td>64.10</td><td>53.28</td><td>41.69</td><td>34.13</td><td>27.93</td><td>25.06</td><td>20.41</td><td>15.48</td><td>13.73</td><td>32.87</td><td>+11.08</td></tr>
+          <tr><td>EEIL</td><td>64.10</td><td>53.11</td><td>43.71</td><td>35.15</td><td>28.96</td><td>24.98</td><td>21.01</td><td>17.26</td><td>15.85</td><td>33.79</td><td>+13.20</td></tr>
+          <tr><td>TOPIC</td><td>64.10</td><td>55.88</td><td>47.07</td><td>45.16</td><td>40.11</td><td>36.38</td><td>33.96</td><td>31.55</td><td>29.37</td><td>42.62</td><td>+26.72</td></tr>
+          <tr><td>CEC</td><td>73.07</td><td>68.88</td><td>65.26</td><td>61.19</td><td>58.09</td><td>55.57</td><td>53.22</td><td>51.34</td><td>49.14</td><td>59.53</td><td>+46.49</td></tr>
+          <tr><td>FACT</td><td>74.60</td><td>72.09</td><td>67.56</td><td>63.52</td><td>61.38</td><td>58.36</td><td>56.28</td><td>54.24</td><td>52.10</td><td>62.24</td><td>+49.45</td></tr>
+          <tr><td>TEEN</td><td>74.92</td><td>72.65</td><td>68.74</td><td>65.01</td><td>62.01</td><td>59.29</td><td>57.90</td><td>54.76</td><td>52.64</td><td>63.21</td><td>+49.99</td></tr>
+          <tr><td>ILAR</td><td>77.50</td><td>73.20</td><td>70.80</td><td>66.70</td><td>64.00</td><td>62.10</td><td>60.50</td><td>58.70</td><td>56.40</td><td>65.54</td><td>+53.75</td></tr>
+          <tr><td>ALICE</td><td>79.00</td><td>70.50</td><td>67.10</td><td>63.40</td><td>61.20</td><td>59.20</td><td>58.10</td><td>56.30</td><td>54.10</td><td>63.21</td><td>+51.45</td></tr>
+          <tr><td>SAGG</td><td>79.13</td><td>74.68</td><td>71.29</td><td>66.98</td><td>64.39</td><td>61.35</td><td>59.57</td><td>57.93</td><td>55.33</td><td>65.63</td><td>+52.68</td></tr>
+          <tr><td>FACL</td><td><u>86.20</u></td><td><u>81.55</u></td><td><u>76.95</u></td><td><u>72.50</u></td><td><u>68.75</u></td><td><u>65.68</u></td><td><u>63.16</u></td><td><u>60.62</u></td><td><u>58.20</u></td><td><u>70.40</u></td><td>+55.55</td></tr>
+          <tr><td>Flexi-FSCIL</td><td>79.54</td><td>76.35</td><td>73.89</td><td>70.07</td><td>68.51</td><td>66.43</td><td>63.17</td><td>61.33</td><td>59.78</td><td>68.79</td><td><u>+57.13</u></td></tr>
+          <tr class="ours">
+            <td><strong>DA² (Ours)</strong></td>
+            <td class="best">95.02</td><td class="best">88.11</td><td class="best">83.64</td><td class="best">78.36</td><td class="best">74.74</td>
+            <td class="best">71.14</td><td class="best">68.34</td><td class="best">64.82</td><td class="best">62.32</td>
+            <td class="best">76.50</td><td class="best">+59.67</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="table-caption">
+        Same notation as Table 1. <strong>Underline</strong> — second best.
+      </div>
+    </div>
+  </section>
+
+  <!-- VISUALIZATION -->
+  <section id="visualization">
+    <div class="section-label">§ 5</div>
+    <h2>Feature Space Analysis</h2>
+    <p style="margin-bottom:20px;">
+      t-SNE visualisations of base-session features on miniImageNet confirm the
+      geometric effect of DA². The method produces compact, sharply delimited clusters
+      consistent with convex-hull preservation; FACL exhibits elongated, overlapping
+      distributions characteristic of boundary-ambiguity overfitting.
+    </p>
+
+    <div class="tsne-pair">
+      <div class="tsne-item">
+        <img src="tsne_session_0-thrs.png" alt="FACL t-SNE — baseline">
+        <div class="tsne-label">Baseline (FACL) — overlapping distributions</div>
+      </div>
+      <div class="tsne-item">
+        <img src="tsne_session_0_our.png" alt="DA² t-SNE — ours">
+        <div class="tsne-label ours">DA² (Ours) — compact, separable clusters</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONCLUSION -->
+  <section id="conclusion">
+    <div class="section-label">§ 6</div>
+    <h2>Conclusion</h2>
+    <div class="conclusion-box">
+      <p>
+        We propose <strong style="color:var(--gold-lt)">DA²</strong>, a dataset-aware adaptive
+        augmentation framework for FSCIL that enriches base-class representations through spatial
+        mixing, Fourier-spectrum permutation, and blend-noise-normalisation. By measuring
+        inter-class cosine congestion in a single forward pass, DA² automatically selects between
+        a full multi-domain pipeline for coarse-grained datasets and spatial-only augmentation
+        for fine-grained datasets — requiring no manual configuration, no additional parameters,
+        and no exemplar replay.
+      </p>
+      <br>
+      <p>
+        The core insight is geometric: any fixed augmentation policy is simultaneously
+        suboptimal for at least one dataset type. Experiments on miniImageNet, CIFAR-100,
+        and CUB-200 confirm the hypothesis, with margins of <strong style="color:var(--gold-lt)">+8.09%</strong>,
+        <strong style="color:var(--gold-lt)">+6.10%</strong>, and
+        <strong style="color:var(--gold-lt)">+0.04%</strong> over the prior best methods.
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<!-- ── FOOTER ───────────────────────────────────────────────────────── -->
+<footer>
+  © 2026 &nbsp;·&nbsp; DA² · FSCIL Research &nbsp;·&nbsp; Anonymous Submission
+</footer>
+
+</body>
+</html>
