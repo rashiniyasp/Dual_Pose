@@ -4,30 +4,31 @@
 <meta charset="UTF-8">
 <title>DUAL-Pose: Efficient Dual-Branch Graph Networks for Skeleton-Based Yoga Pose Recognition</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <style>
 /* ── TOKENS ─────────────────────────────────────────────────────── */
 :root {
-  --navy:      #0c4782;
-  --navy-dark: #081f3a;
-  --teal:      #0d6e6e;
-  --teal-lt:   #2ba0a0;
-  --gold:      #c68f20;
-  --gold-lt:   #e8b84b;
-  --cream:     #f7f5f0;
-  --cream-dk:  #ece8df;
-  --muted:     #6b7080;
-  --text:      #1a1e2b;
-  --white:     #ffffff;
-  --rule:      rgba(12,71,130,0.15);
-  --shadow-sm: 0 2px 8px rgba(12,71,130,0.07);
-  --shadow-md: 0 8px 32px rgba(12,71,130,0.11);
-  --shadow-lg: 0 20px 60px rgba(12,71,130,0.14);
-  --radius:    4px;
-  --serif:     'EB Garamond', Georgia, serif;
-  --sans:      'DM Sans', system-ui, sans-serif;
-  --mono:      'DM Mono', monospace;
+  --forest:     #182e21;
+  --green:      #274d36;
+  --sage:       #3b7252;
+  --sage-lt:    #5da571;
+  --amber:      #b86e12;
+  --amber-lt:   #e09830;
+  --parch:      #f4efe4;
+  --parch-dk:   #e6dece;
+  --parch-mid:  #ede6d6;
+  --muted:      #647060;
+  --text:       #1c2218;
+  --white:      #ffffff;
+  --rule:       rgba(59,114,82,0.18);
+  --shadow-sm:  0 2px 10px rgba(24,46,33,0.08);
+  --shadow-md:  0 8px 32px rgba(24,46,33,0.12);
+  --shadow-lg:  0 20px 60px rgba(24,46,33,0.16);
+  --radius:     6px;
+  --serif:      'Lora', Georgia, serif;
+  --sans:       'DM Sans', system-ui, sans-serif;
+  --mono:       'DM Mono', monospace;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,129 +38,161 @@ body {
   font-family: var(--sans);
   font-size: 16px;
   color: var(--text);
-  background: var(--cream);
+  background: var(--parch);
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
 }
 
+/* subtle paper grain */
 body::before {
   content: '';
   position: fixed; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 1000;
-  opacity: .5;
+  opacity: .7;
 }
 
 /* ── HEADER ──────────────────────────────────────────────────────── */
 header {
-  background: var(--navy-dark);
+  background: var(--forest);
   color: var(--white);
-  padding: 0;
   position: relative;
   overflow: hidden;
 }
 
+/* diagonal texture lines */
+header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(
+    -55deg,
+    rgba(255,255,255,.018) 0px,
+    rgba(255,255,255,.018) 1px,
+    transparent 1px,
+    transparent 38px
+  );
+  pointer-events: none;
+}
+
+/* radial glow center-left */
+header::after {
+  content: '';
+  position: absolute;
+  top: -60px; left: -80px;
+  width: 500px; height: 400px;
+  background: radial-gradient(ellipse, rgba(93,165,113,.13) 0%, transparent 70%);
+  pointer-events: none;
+}
+
 .header-rule {
-  height: 4px;
-  background: linear-gradient(90deg, var(--teal), var(--teal-lt), var(--gold), var(--teal-lt), var(--teal));
+  height: 5px;
+  background: linear-gradient(90deg,
+    var(--amber) 0%, var(--amber-lt) 30%,
+    var(--sage-lt) 60%, var(--sage) 100%);
 }
 
 .header-inner {
-  max-width: 900px;
+  max-width: 920px;
   margin: auto;
-  padding: 68px 32px 52px;
+  padding: 70px 36px 56px;
   position: relative;
   z-index: 2;
-}
-
-header::after {
-  content: '';
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
 }
 
 .venue-tag {
   display: inline-block;
   font-family: var(--mono);
   font-size: 11px;
-  letter-spacing: .12em;
+  letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--teal-lt);
-  border: 1px solid rgba(43,160,160,.4);
-  padding: 4px 10px;
-  border-radius: 2px;
-  margin-bottom: 18px;
+  color: var(--amber-lt);
+  border: 1px solid rgba(224,152,48,.38);
+  padding: 4px 11px;
+  border-radius: 3px;
+  margin-bottom: 20px;
+  background: rgba(224,152,48,.06);
 }
 
 h1 {
   font-family: var(--serif);
-  font-size: clamp(24px, 4vw, 42px);
+  font-size: clamp(24px, 4vw, 44px);
   font-weight: 500;
   line-height: 1.22;
   letter-spacing: -.01em;
   color: var(--white);
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
-h1 .highlight { color: var(--teal-lt); font-style: italic; }
+h1 .highlight {
+  color: var(--sage-lt);
+  font-style: italic;
+}
 
+/* authors inline with separators */
 .authors-block {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 20px;
-  margin-bottom: 10px;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 8px;
 }
 
 .author {
   font-size: 15px;
-  color: rgba(255,255,255,.78);
+  color: rgba(255,255,255,.8);
   font-family: var(--serif);
+  font-style: italic;
+}
+
+.author-sep {
+  display: inline-block;
+  width: 1px;
+  height: 12px;
+  background: rgba(255,255,255,.22);
+  margin: 0 14px;
+  vertical-align: middle;
 }
 
 .affiliation {
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: .07em;
-  color: rgba(255,255,255,.45);
-  margin-bottom: 8px;
+  color: rgba(255,255,255,.42);
+  margin-bottom: 6px;
 }
 
 .contact {
   font-family: var(--mono);
   font-size: 11px;
-  letter-spacing: .04em;
-  color: rgba(255,255,255,.35);
+  letter-spacing: .03em;
+  color: rgba(255,255,255,.3);
   margin-bottom: 28px;
 }
 
 .badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 30px;
+  gap: 7px;
+  margin-bottom: 26px;
 }
 
 .badge {
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: .08em;
+  font-size: 10px;
+  letter-spacing: .09em;
   text-transform: uppercase;
-  padding: 5px 11px;
-  border-radius: 2px;
-  background: rgba(255,255,255,.07);
-  border: 1px solid rgba(255,255,255,.11);
-  color: rgba(255,255,255,.75);
+  padding: 4px 11px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  color: rgba(255,255,255,.68);
 }
 
 .links-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 9px;
   margin-bottom: 28px;
 }
 
@@ -173,57 +206,65 @@ h1 .highlight { color: var(--teal-lt); font-style: italic; }
   text-transform: uppercase;
   text-decoration: none;
   padding: 7px 14px;
-  border-radius: 2px;
-  border: 1px solid rgba(43,160,160,.4);
-  color: var(--teal-lt);
+  border-radius: 3px;
+  border: 1px solid rgba(93,165,113,.38);
+  color: var(--sage-lt);
   transition: background .2s, border-color .2s;
 }
 .link-pill:hover {
-  background: rgba(43,160,160,.12);
-  border-color: var(--teal-lt);
+  background: rgba(93,165,113,.1);
+  border-color: var(--sage-lt);
 }
 .link-pill svg { width: 13px; height: 13px; fill: currentColor; }
 
 .sota-strip {
   display: inline-flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-  background: linear-gradient(90deg, rgba(13,110,110,.22), rgba(13,110,110,.1));
-  border: 1px solid rgba(43,160,160,.35);
-  border-radius: 3px;
-  padding: 10px 20px;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
+  background: linear-gradient(90deg, rgba(59,114,82,.2), rgba(59,114,82,.08));
+  border: 1px solid rgba(93,165,113,.3);
+  border-left: 3px solid var(--sage-lt);
+  border-radius: 0 3px 3px 0;
+  padding: 12px 20px;
 }
 
 .sota-strip .sota-label {
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: .14em;
+  letter-spacing: .15em;
   text-transform: uppercase;
-  color: var(--teal-lt);
+  color: var(--sage-lt);
 }
 
 .sota-strip .sota-numbers {
   font-family: var(--serif);
-  font-size: 17px;
-  color: var(--white);
+  font-size: 16.5px;
+  color: rgba(255,255,255,.9);
+  line-height: 1.5;
 }
 
-.sota-strip .sota-numbers em { color: var(--teal-lt); font-style: normal; font-weight: 500; }
+.sota-strip .sota-numbers em {
+  color: var(--amber-lt);
+  font-style: normal;
+  font-weight: 600;
+}
 
 /* ── NAV ─────────────────────────────────────────────────────────── */
 .nav {
-  background: var(--navy);
+  background: var(--green);
   position: sticky;
   top: 0;
   z-index: 100;
-  border-bottom: 1px solid rgba(255,255,255,.07);
+  border-bottom: 1px solid rgba(0,0,0,.15);
+  box-shadow: 0 2px 12px rgba(24,46,33,.25);
 }
 
 .nav-inner {
-  max-width: 900px;
+  max-width: 920px;
   margin: auto;
-  padding: 0 32px;
+  padding: 0 36px;
   display: flex;
   gap: 0;
   overflow-x: auto;
@@ -231,46 +272,58 @@ h1 .highlight { color: var(--teal-lt); font-style: italic; }
 
 .nav a {
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: .1em;
+  font-size: 10.5px;
+  letter-spacing: .11em;
   text-transform: uppercase;
-  color: rgba(255,255,255,.5);
+  color: rgba(255,255,255,.48);
   text-decoration: none;
-  padding: 14px 16px;
+  padding: 13px 16px;
   white-space: nowrap;
   border-bottom: 2px solid transparent;
   transition: color .2s, border-color .2s;
 }
 
 .nav a:hover {
-  color: var(--teal-lt);
-  border-bottom-color: var(--teal);
+  color: var(--amber-lt);
+  border-bottom-color: var(--amber);
 }
 
 /* ── LAYOUT ──────────────────────────────────────────────────────── */
 .container {
-  max-width: 900px;
+  max-width: 920px;
   margin: auto;
-  padding: 0 32px 80px;
+  padding: 0 36px 80px;
 }
 
-section { padding-top: 60px; }
+section { padding-top: 64px; }
 
 .section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: .18em;
+  letter-spacing: .2em;
   text-transform: uppercase;
-  color: var(--teal);
-  margin-bottom: 6px;
+  color: var(--sage);
+  margin-bottom: 8px;
+}
+
+.section-label::after {
+  content: '';
+  display: inline-block;
+  width: 28px;
+  height: 1px;
+  background: var(--sage);
+  opacity: .5;
 }
 
 h2 {
   font-family: var(--serif);
-  font-size: clamp(20px, 3vw, 28px);
+  font-size: clamp(19px, 2.8vw, 28px);
   font-weight: 500;
-  color: var(--navy);
-  margin-bottom: 20px;
+  color: var(--green);
+  margin-bottom: 18px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--rule);
   line-height: 1.25;
@@ -278,46 +331,57 @@ h2 {
 
 h3 {
   font-family: var(--serif);
-  font-size: 18px;
+  font-size: 17.5px;
   font-weight: 500;
-  color: var(--navy);
+  color: var(--forest);
   margin-bottom: 8px;
 }
 
 p {
-  color: #2e3240;
-  line-height: 1.75;
+  color: #2a3226;
+  line-height: 1.78;
   font-size: 15.5px;
 }
 
 /* ── ABSTRACT ────────────────────────────────────────────────────── */
 .abstract-box {
   background: var(--white);
-  border-left: 3px solid var(--teal);
+  border: 1px solid var(--parch-dk);
+  border-left: 4px solid var(--sage);
   padding: 28px 32px;
   border-radius: 0 var(--radius) var(--radius) 0;
   box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.abstract-box::before {
+  content: '"';
+  position: absolute;
+  top: 8px; left: 20px;
+  font-family: var(--serif);
+  font-size: 72px;
+  color: var(--sage);
+  opacity: .12;
+  line-height: 1;
+  pointer-events: none;
 }
 
 /* ── FIGURE ──────────────────────────────────────────────────────── */
 .figure-wrap {
   margin: 28px 0;
   background: var(--white);
-  border: 1px solid var(--cream-dk);
+  border: 1px solid var(--parch-dk);
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow-md);
 }
 
-.figure-wrap img {
-  width: 100%;
-  display: block;
-}
+.figure-wrap img { width: 100%; display: block; }
 
 .figure-placeholder {
   width: 100%;
-  min-height: 280px;
-  background: linear-gradient(135deg, #f0f5fb 0%, #e8eff7 100%);
+  min-height: 260px;
+  background: linear-gradient(135deg, #edf5f0 0%, #e4efea 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -326,44 +390,40 @@ p {
   color: var(--muted);
 }
 
-.figure-placeholder .ph-icon {
-  font-size: 36px;
-  opacity: .35;
-}
-
+.figure-placeholder .ph-icon  { font-size: 34px; opacity: .3; }
 .figure-placeholder .ph-label {
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: .1em;
   text-transform: uppercase;
-  opacity: .55;
+  opacity: .5;
 }
-
 .figure-placeholder .ph-filename {
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--navy);
-  background: rgba(12,71,130,.08);
+  color: var(--green);
+  background: rgba(59,114,82,.08);
   padding: 3px 10px;
-  border-radius: 2px;
-  border: 1px dashed rgba(12,71,130,.3);
+  border-radius: 3px;
+  border: 1px dashed rgba(59,114,82,.3);
 }
 
 .figure-caption {
-  padding: 14px 20px;
+  padding: 13px 20px;
   font-size: 13.5px;
   color: var(--muted);
-  border-top: 1px solid var(--cream-dk);
+  border-top: 1px solid var(--parch-dk);
   font-style: italic;
   line-height: 1.55;
+  background: #faf8f4;
 }
 
 .figure-caption strong {
-  color: var(--navy);
+  color: var(--green);
   font-style: normal;
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: .08em;
+  font-size: 10.5px;
+  letter-spacing: .09em;
   text-transform: uppercase;
 }
 
@@ -371,49 +431,109 @@ p {
 .methods-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-top: 24px;
+  gap: 14px;
+  margin-top: 22px;
 }
 
 .method-card {
   background: var(--white);
-  border: 1px solid var(--cream-dk);
-  border-top: 3px solid var(--navy);
+  border: 1px solid var(--parch-dk);
   border-radius: var(--radius);
   padding: 22px 20px 20px;
   box-shadow: var(--shadow-sm);
   transition: transform .2s, box-shadow .2s;
+  position: relative;
+  overflow: hidden;
 }
+
+.method-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+
+.method-card:nth-child(1)::before { background: var(--green); }
+.method-card:nth-child(2)::before { background: var(--sage); }
+.method-card:nth-child(3)::before { background: var(--amber); }
 
 .method-card:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-md);
 }
 
-.method-card:nth-child(1) { border-top-color: var(--navy); }
-.method-card:nth-child(2) { border-top-color: var(--teal); }
-.method-card:nth-child(3) { border-top-color: var(--gold); }
-
-.method-icon {
+.method-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
   font-family: var(--mono);
   font-size: 11px;
-  letter-spacing: .1em;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.method-card:nth-child(1) .method-num { background: rgba(39,77,54,.1); color: var(--green); }
+.method-card:nth-child(2) .method-num { background: rgba(59,114,82,.1); color: var(--sage); }
+.method-card:nth-child(3) .method-num { background: rgba(184,110,18,.1); color: var(--amber); }
+
+/* ── ARCH SPECS ───────────────────────────────────────────────────── */
+.arch-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.arch-spec {
+  background: var(--white);
+  border: 1px solid var(--parch-dk);
+  border-radius: var(--radius);
+  padding: 18px 14px 16px;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.arch-spec::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sage), var(--amber));
+  opacity: .5;
+}
+
+.arch-spec-value {
+  font-family: var(--serif);
+  font-size: 28px;
+  color: var(--green);
+  line-height: 1;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.arch-spec-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .09em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 10px;
 }
 
 /* ── DATASET CARDS ────────────────────────────────────────────────── */
 .dataset-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 14px;
   margin-top: 20px;
 }
 
 .dataset-card {
   background: var(--white);
-  border: 1px solid var(--cream-dk);
+  border: 1px solid var(--parch-dk);
   border-radius: var(--radius);
   padding: 22px 22px 18px;
   box-shadow: var(--shadow-sm);
@@ -427,8 +547,8 @@ p {
   height: 3px;
 }
 
-.dataset-card:nth-child(1)::before { background: linear-gradient(90deg, var(--navy), var(--teal)); }
-.dataset-card:nth-child(2)::before { background: linear-gradient(90deg, var(--teal), var(--gold)); }
+.dataset-card:nth-child(1)::before { background: linear-gradient(90deg, var(--green), var(--sage)); }
+.dataset-card:nth-child(2)::before { background: linear-gradient(90deg, var(--sage), var(--amber)); }
 
 .dataset-name {
   font-family: var(--mono);
@@ -441,32 +561,32 @@ p {
 
 .dataset-stat {
   font-family: var(--serif);
-  font-size: 28px;
-  color: var(--navy);
+  font-size: 32px;
+  color: var(--green);
   line-height: 1;
   margin-bottom: 4px;
 }
 
 .dataset-meta {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--muted);
-  line-height: 1.55;
-  margin-top: 6px;
+  line-height: 1.6;
+  margin-top: 8px;
 }
 
-/* ── METRICS ─────────────────────────────────────────────────────── */
+/* ── METRICS ROW ──────────────────────────────────────────────────── */
 .metrics-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 36px;
+  gap: 14px;
+  margin-bottom: 34px;
 }
 
 .metric-card {
   background: var(--white);
-  border: 1px solid var(--cream-dk);
+  border: 1px solid var(--parch-dk);
   border-radius: var(--radius);
-  padding: 24px 20px 20px;
+  padding: 26px 22px 22px;
   box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
@@ -475,56 +595,75 @@ p {
 .metric-card::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0;
-  height: 3px;
+  height: 4px;
 }
-.metric-card:nth-child(1)::before { background: linear-gradient(90deg, var(--navy), var(--teal)); }
-.metric-card:nth-child(2)::before { background: linear-gradient(90deg, var(--teal), var(--gold)); }
+
+.metric-card:nth-child(1)::before {
+  background: linear-gradient(90deg, var(--green), var(--sage));
+}
+.metric-card:nth-child(2)::before {
+  background: linear-gradient(90deg, var(--sage), var(--amber));
+}
+
+/* watermark number */
+.metric-card::after {
+  content: attr(data-bench);
+  position: absolute;
+  right: 16px; bottom: 8px;
+  font-family: var(--serif);
+  font-size: 56px;
+  color: var(--sage);
+  opacity: .05;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+}
 
 .metric-dataset {
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: .15em;
+  letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: 7px;
 }
 
 .metric-value {
   font-family: var(--serif);
-  font-size: 38px;
-  color: var(--navy);
+  font-size: 40px;
+  color: var(--forest);
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 
 .metric-ci {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--muted);
   font-family: var(--mono);
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 
 .metric-delta {
   font-size: 13px;
-  color: var(--teal);
+  color: var(--sage);
   font-weight: 500;
   font-family: var(--mono);
 }
 
 .metric-params {
   font-size: 12px;
-  color: var(--gold);
+  color: var(--amber);
   font-family: var(--mono);
-  margin-top: 4px;
+  margin-top: 5px;
 }
 
 /* ── TABLES ──────────────────────────────────────────────────────── */
 .table-wrap {
   overflow-x: auto;
-  margin: 20px 0;
+  margin: 18px 0;
   border-radius: var(--radius);
   box-shadow: var(--shadow-md);
-  border: 1px solid var(--cream-dk);
+  border: 1px solid var(--parch-dk);
 }
 
 table {
@@ -536,7 +675,7 @@ table {
 }
 
 thead tr:first-child th {
-  background: var(--navy-dark);
+  background: var(--forest);
   color: var(--white);
   font-family: var(--mono);
   font-size: 10px;
@@ -550,22 +689,10 @@ thead tr:first-child th {
 
 thead tr:first-child th:first-child { text-align: left; padding-left: 16px; }
 
-thead tr.subhead th {
-  background: #e4edf6;
-  color: var(--navy);
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .06em;
-  padding: 8px 10px;
-  text-align: center;
-  border-bottom: 2px solid var(--navy);
-  font-weight: 500;
-}
-
-tbody tr { border-bottom: 1px solid #eee; }
+tbody tr { border-bottom: 1px solid #e8e2d6; }
 tbody tr:last-child { border-bottom: none; }
-tbody tr:nth-child(even) td { background: #f9fafc; }
-tbody tr:hover td { background: #eef4fb !important; }
+tbody tr:nth-child(even) td { background: #faf8f4; }
+tbody tr:hover td { background: #edf5f0 !important; }
 
 tbody td {
   padding: 9px 10px;
@@ -578,40 +705,51 @@ tbody td:first-child {
   text-align: left;
   padding-left: 16px;
   font-size: 13.5px;
-  color: var(--navy-dark);
-  font-weight: 400;
+  color: var(--forest);
 }
 
 tr.section-head td {
-  background: #f0f5fb !important;
-  color: var(--navy);
+  background: #e9f0ec !important;
+  color: var(--green);
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: .1em;
   text-transform: uppercase;
   padding: 7px 16px;
   font-weight: 500;
-  border-top: 1px solid #d0dded;
-  border-bottom: 1px solid #d0dded;
+  border-top: 1px solid #c8dcd0;
+  border-bottom: 1px solid #c8dcd0;
+}
+
+tr.group-head td {
+  padding: 5px 16px;
+  font-size: 11px;
+  font-family: var(--mono);
+  letter-spacing: .08em;
+  color: var(--muted);
+  background: #faf8f4 !important;
+  border-bottom: 1px solid #e8e2d6;
 }
 
 tr.ours td {
-  background: linear-gradient(90deg, rgba(13,110,110,.07), rgba(12,71,130,.05)) !important;
+  background: linear-gradient(90deg,
+    rgba(59,114,82,.07), rgba(184,110,18,.05)) !important;
   font-weight: 600;
-  color: var(--navy-dark);
+  color: var(--forest);
 }
 
 tr.ours td:first-child {
-  color: var(--navy);
+  color: var(--green);
   font-family: var(--serif);
-  font-size: 14.5px;
+  font-size: 14px;
 }
 
-.best { color: var(--teal); font-weight: 700; }
+.best { color: var(--sage); font-weight: 700; }
+
 .sig-mark {
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--gold);
+  color: var(--amber);
   vertical-align: super;
 }
 
@@ -620,11 +758,11 @@ tr.ours td:first-child {
   font-size: 13px;
   color: var(--muted);
   font-style: italic;
-  background: var(--cream-dk);
-  border-top: 1px solid #ddd;
+  background: var(--parch-mid);
+  border-top: 1px solid var(--parch-dk);
   line-height: 1.5;
 }
-.table-caption strong { font-style: normal; color: var(--navy); }
+.table-caption strong { font-style: normal; color: var(--green); }
 
 /* ── ABLATION GRID ────────────────────────────────────────────────── */
 .ablation-grid {
@@ -637,9 +775,9 @@ tr.ours td:first-child {
 /* ── BAR CHART ────────────────────────────────────────────────────── */
 .bar-chart-wrap {
   background: var(--white);
-  border: 1px solid var(--cream-dk);
+  border: 1px solid var(--parch-dk);
   border-radius: var(--radius);
-  padding: 24px 24px 20px;
+  padding: 26px 26px 22px;
   box-shadow: var(--shadow-sm);
   margin-top: 20px;
 }
@@ -650,18 +788,18 @@ tr.ours td:first-child {
   letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
-.bar-group {
-  margin-bottom: 16px;
-}
+.bar-group { margin-bottom: 18px; }
 
 .bar-group-label {
   font-size: 13px;
-  color: var(--navy-dark);
+  color: var(--forest);
   font-weight: 500;
   margin-bottom: 6px;
+  font-family: var(--serif);
+  font-style: italic;
 }
 
 .bar-row {
@@ -676,45 +814,45 @@ tr.ours td:first-child {
   font-size: 10px;
   letter-spacing: .07em;
   color: var(--muted);
-  width: 70px;
+  width: 56px;
   flex-shrink: 0;
   text-align: right;
 }
 
 .bar-track {
   flex: 1;
-  height: 18px;
-  background: #eef1f5;
-  border-radius: 2px;
+  height: 20px;
+  background: #edeae3;
+  border-radius: 3px;
   overflow: hidden;
-  position: relative;
 }
 
 .bar-fill {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: 6px;
+  padding-right: 7px;
   font-family: var(--mono);
   font-size: 10px;
   color: var(--white);
   font-weight: 500;
-  transition: width .8s ease;
   white-space: nowrap;
 }
 
-.bar-fill.without { background: rgba(12,71,130,.35); }
-.bar-fill.with    { background: var(--teal); }
-.bar-fill.ours    { background: var(--navy); }
-.bar-fill.ours-with { background: var(--gold); }
+.bar-fill.without  { background: rgba(59,114,82,.4); }
+.bar-fill.with     { background: var(--sage); }
+.bar-fill.ours     { background: var(--green); }
+.bar-fill.ours-with{ background: var(--amber); }
 
 .bar-legend {
   display: flex;
   gap: 16px;
-  margin-top: 14px;
+  margin-top: 16px;
   flex-wrap: wrap;
+  border-top: 1px solid var(--parch-dk);
+  padding-top: 14px;
 }
 
 .legend-item {
@@ -723,55 +861,41 @@ tr.ours td:first-child {
   gap: 6px;
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: .06em;
+  letter-spacing: .05em;
   color: var(--muted);
 }
 
 .legend-swatch {
-  width: 14px;
+  width: 16px;
   height: 10px;
   border-radius: 2px;
   flex-shrink: 0;
 }
 
-/* ── ARCHITECTURE SPECS ───────────────────────────────────────────── */
-.arch-spec-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.arch-spec {
+/* ── PIPELINE TABLE ───────────────────────────────────────────────── */
+.pipeline-box {
+  margin-top: 18px;
   background: var(--white);
-  border: 1px solid var(--cream-dk);
+  border: 1px solid var(--parch-dk);
   border-radius: var(--radius);
-  padding: 16px 14px 14px;
+  padding: 20px 22px;
   box-shadow: var(--shadow-sm);
-  text-align: center;
 }
 
-.arch-spec-value {
-  font-family: var(--serif);
-  font-size: 26px;
-  color: var(--navy);
-  line-height: 1;
-  margin-bottom: 5px;
-}
-
-.arch-spec-label {
+.pipeline-box .pipe-label {
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: .09em;
+  letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--muted);
+  margin-bottom: 14px;
 }
 
 /* ── CONCLUSION ───────────────────────────────────────────────────── */
 .conclusion-box {
-  background: var(--navy-dark);
+  background: var(--forest);
   color: rgba(255,255,255,.85);
-  padding: 40px 40px 36px;
+  padding: 40px 42px 36px;
   border-radius: var(--radius);
   position: relative;
   overflow: hidden;
@@ -781,50 +905,67 @@ tr.ours td:first-child {
 .conclusion-box::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--teal), var(--teal-lt), var(--gold), var(--teal-lt), var(--teal));
+  height: 4px;
+  background: linear-gradient(90deg, var(--amber), var(--amber-lt), var(--sage-lt), var(--sage));
+}
+
+/* diagonal lines inside conclusion */
+.conclusion-box::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(
+    -55deg,
+    rgba(255,255,255,.012) 0px,
+    rgba(255,255,255,.012) 1px,
+    transparent 1px,
+    transparent 36px
+  );
+  pointer-events: none;
 }
 
 .conclusion-box p {
   color: rgba(255,255,255,.78);
   font-size: 15.5px;
-  line-height: 1.75;
+  line-height: 1.78;
+  position: relative;
+  z-index: 1;
 }
 
-/* ── FUTURE WORK PILL ─────────────────────────────────────────────── */
 .future-tag {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   margin-top: 18px;
-  background: rgba(43,160,160,.15);
-  border: 1px solid rgba(43,160,160,.3);
-  border-radius: 2px;
+  background: rgba(93,165,113,.14);
+  border: 1px solid rgba(93,165,113,.28);
+  border-radius: 3px;
   padding: 7px 14px;
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--teal-lt);
+  color: var(--sage-lt);
+  position: relative;
+  z-index: 1;
 }
 
 footer {
-  background: var(--navy-dark);
+  background: var(--forest);
   text-align: center;
-  padding: 28px 32px;
+  padding: 26px 32px;
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: .08em;
-  color: rgba(255,255,255,.3);
+  color: rgba(255,255,255,.28);
   margin-top: 64px;
-  border-top: 1px solid rgba(255,255,255,.05);
+  border-top: 1px solid rgba(255,255,255,.04);
 }
 
+/* ── UTILS ───────────────────────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 .fade-up { animation: fadeUp .6s ease both; }
 .fade-up:nth-child(2) { animation-delay: .1s; }
 .fade-up:nth-child(3) { animation-delay: .2s; }
@@ -832,9 +973,9 @@ footer {
 .mt-8  { margin-top: 8px; }
 .mt-16 { margin-top: 16px; }
 .mt-24 { margin-top: 24px; }
-.mb-8  { margin-bottom: 8px; }
+
 .muted-label {
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--muted);
   font-family: var(--mono);
   letter-spacing: .06em;
@@ -843,15 +984,17 @@ footer {
 }
 
 @media (max-width: 680px) {
-  .header-inner { padding: 44px 20px 36px; }
-  .container { padding: 0 20px 60px; }
-  .methods-grid { grid-template-columns: 1fr; }
-  .dataset-grid  { grid-template-columns: 1fr; }
-  .metrics-row   { grid-template-columns: 1fr; }
-  .ablation-grid { grid-template-columns: 1fr; }
-  .arch-spec-grid { grid-template-columns: repeat(2,1fr); }
-  .nav-inner { overflow-x: auto; }
-  h1 { font-size: 22px; }
+  .header-inner { padding: 44px 20px 38px; }
+  .container    { padding: 0 20px 60px; }
+  .methods-grid,
+  .dataset-grid,
+  .metrics-row,
+  .ablation-grid  { grid-template-columns: 1fr; }
+  .arch-spec-grid { grid-template-columns: repeat(2, 1fr); }
+  .nav-inner      { overflow-x: auto; }
+  h1              { font-size: 22px; }
+  .authors-block  { flex-direction: column; gap: 4px; }
+  .author-sep     { display: none; }
 }
 </style>
 </head>
@@ -868,46 +1011,46 @@ footer {
       for Skeleton-Based Yoga Pose Recognition
     </h1>
 
-    <div class="authors-block" style="margin-top:12px;">
+    <div class="authors-block" style="margin-top:14px;">
       <span class="author">Rashi Niyas P</span>
+      <span class="author-sep"></span>
       <span class="author">Hitika Tiwari</span>
+      <span class="author-sep"></span>
       <span class="author">Tushar Shinde</span>
     </div>
-    <div class="affiliation">Indian Institute of Technology Madras Zanzibar</div>
+    <div class="affiliation" style="margin-top:8px;">Indian Institute of Technology Madras Zanzibar</div>
     <div class="contact">{zda24m005, hitika, shinde}@iitmz.ac.in</div>
 
     <div class="badges">
-      <span class="badge">FSCIL</span>
       <span class="badge">Skeleton-Based Recognition</span>
       <span class="badge">Graph Neural Networks</span>
       <span class="badge">Yoga Pose Classification</span>
       <span class="badge">Attention Mechanism</span>
+      <span class="badge">Privacy-Preserving</span>
       <span class="badge">Edge Deployment</span>
     </div>
 
     <div class="links-row">
       <a class="link-pill" href="https://github.com/rashiniyasp/DUAL-Pose" target="_blank">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.38.6.11.82-.26.82-.58 0-.28-.01-1.03-.02-2.03-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.48 1 .11-.78.42-1.3.76-1.6-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02 0 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.9-.01 3.29 0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
-        Code
+        GitHub Code
       </a>
       <a class="link-pill" href="https://www.kaggle.com/datasets/rashiniyasp/yoga-82-keypoints-2026/data" target="_blank">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.825 23.859c-.022.092-.117.141-.281.141h-3.139c-.187 0-.351-.082-.492-.248l-5.178-6.589-1.448 1.374v5.111c0 .235-.117.352-.351.352H5.505c-.236 0-.354-.117-.354-.352V.353c0-.233.118-.353.354-.353h2.431c.234 0 .351.12.351.353v14.343l6.203-6.272c.165-.165.33-.246.495-.246h3.239c.144 0 .236.06.285.18.046.149.034.255-.036.315l-6.555 6.344 6.836 8.507c.095.104.117.208.07.311z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M18.825 23.859c-.022.092-.117.141-.281.141h-3.139c-.187 0-.351-.082-.492-.248l-5.178-6.589-1.448 1.374v5.111c0 .235-.117.352-.351.352H5.505c-.236 0-.354-.117-.354-.352V.353c0-.233.118-.353.354-.353h2.431c.234 0 .351.12.351.353v14.343l6.203-6.272c.165-.165.33-.246.495-.246h3.239c.144 0 .236.06.285.18.046.149.034.255-.036.315l-6.555 6.344 6.836 8.507c.095.104.117.208.07.311z"/></svg>
         Yoga-82 Data
       </a>
       <a class="link-pill" href="https://www.kaggle.com/datasets/rashiniyasp/yoga-16-keypoint-dataset" target="_blank">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.825 23.859c-.022.092-.117.141-.281.141h-3.139c-.187 0-.351-.082-.492-.248l-5.178-6.589-1.448 1.374v5.111c0 .235-.117.352-.351.352H5.505c-.236 0-.354-.117-.354-.352V.353c0-.233.118-.353.354-.353h2.431c.234 0 .351.12.351.353v14.343l6.203-6.272c.165-.165.33-.246.495-.246h3.239c.144 0 .236.06.285.18.046.149.034.255-.036.315l-6.555 6.344 6.836 8.507c.095.104.117.208.07.311z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M18.825 23.859c-.022.092-.117.141-.281.141h-3.139c-.187 0-.351-.082-.492-.248l-5.178-6.589-1.448 1.374v5.111c0 .235-.117.352-.351.352H5.505c-.236 0-.354-.117-.354-.352V.353c0-.233.118-.353.354-.353h2.431c.234 0 .351.12.351.353v14.343l6.203-6.272c.165-.165.33-.246.495-.246h3.239c.144 0 .236.06.285.18.046.149.034.255-.036.315l-6.555 6.344 6.836 8.507c.095.104.117.208.07.311z"/></svg>
         Yoga-16 Data
       </a>
     </div>
 
     <div class="sota-strip">
-      <div>
-        <div class="sota-label">Best Skeleton-Only Results</div>
-        <div class="sota-numbers">
-          Yoga-82 <em>88.62%</em>&nbsp;·&nbsp;(+9.62% vs. SOTA)&nbsp;&nbsp;
-          Yoga-16 <em>97.25%</em>&nbsp;·&nbsp;(+1.16% vs. SOTA)&nbsp;&nbsp;
-          Params <em>∼51K</em>&nbsp;·&nbsp;350× fewer
-        </div>
+      <div class="sota-label">Best Skeleton-Only Performance</div>
+      <div class="sota-numbers">
+        Yoga-82 &nbsp;<em>88.62%</em> &nbsp;·&nbsp; +9.62% vs. skeleton SOTA<br>
+        Yoga-16 &nbsp;<em>97.25%</em> &nbsp;·&nbsp; +1.16% vs. skeleton SOTA<br>
+        Parameters &nbsp;<em>∼51K</em> &nbsp;·&nbsp; 350× fewer than any baseline
       </div>
     </div>
   </div>
@@ -929,98 +1072,94 @@ footer {
 <!-- ── CONTENT ─────────────────────────────────────────────────────── -->
 <div class="container">
 
-  <!-- ABSTRACT -->
+  <!-- § 1 ABSTRACT -->
   <section id="abstract">
     <div class="section-label">§ 1</div>
     <h2>Abstract</h2>
     <div class="abstract-box">
       <p>
         Skeleton-based yoga pose recognition requires representations robust to
-        self-occlusion and inter-subject variability. Existing approaches that rely
-        on raw or weakly normalised 3D skeletal coordinates are sensitive to camera
-        orientation and structural noise, producing overlapping feature distributions
-        that reduce classification accuracy.
+        self-occlusion and inter-subject variability. Existing approaches that rely on raw or
+        weakly normalised 3D skeletal coordinates are sensitive to camera orientation and
+        structural noise, producing overlapping feature distributions that reduce classification
+        accuracy.
       </p>
       <br>
       <p>
-        We propose <strong>Dual-branch Unified Aggregation for Latent Pose
-        Representation (DUAL-Pose)</strong>, a skeleton-only framework that disentangles
-        intrinsic pose structure from translational and orientational biases using 3D
-        joint coordinates extracted from a commodity pose-estimation pipeline, without
-        requiring RGB imagery or multimodal input. DUAL-Pose employs a dual-branch
-        graph network comprising: (i) a <strong>local branch</strong> modelling anatomical
-        topology via graph convolutions over the skeletal graph, and (ii) a
-        <strong>global branch</strong> capturing long-range pose context through bone
-        displacement vectors and intrinsic limb-angle constraints. Per-frame embeddings
-        from both branches are fused and aggregated across N synthetic yaw-rotated views
-        using an attention-based mechanism that assigns learned soft weights, emphasising
-        the most discriminative geometric orientations.
+        We propose <strong>Dual-branch Unified Aggregation for Latent Pose Representation
+        (DUAL-Pose)</strong>, a skeleton-only framework that disentangles intrinsic pose
+        structure from translational and orientational biases using 3D joint coordinates
+        extracted from a commodity pose-estimation pipeline, without requiring RGB imagery or
+        multimodal input. DUAL-Pose employs a dual-branch graph network comprising:
+        (i) a <strong>local branch</strong> modelling anatomical topology via graph convolutions
+        over the skeletal graph, and (ii) a <strong>global branch</strong> capturing long-range
+        pose context through bone displacement vectors and intrinsic limb-angle constraints.
+        Per-frame embeddings are fused and aggregated across N synthetic yaw-rotated views
+        using an attention-based mechanism that assigns learned soft weights, emphasising the
+        most discriminative geometric orientations.
       </p>
       <br>
       <p>
-        Experiments on the <strong>Yoga-82</strong> and <strong>Yoga-16</strong> benchmarks
-        demonstrate <strong>88.62%</strong> and <strong>97.25%</strong> top-1 accuracy,
-        improving over the strongest skeleton-based baselines by <strong>+9.62%</strong>
-        and <strong>+1.16%</strong> respectively, with only ∼51K trainable parameters —
-        over <strong>350×</strong> fewer than existing skeleton-based and image-based approaches.
+        Experiments on <strong>Yoga-82</strong> and <strong>Yoga-16</strong> demonstrate
+        <strong>88.62%</strong> and <strong>97.25%</strong> top-1 accuracy, improving over the
+        strongest skeleton-based baselines by <strong>+9.62%</strong> and <strong>+1.16%</strong>
+        respectively, with only ∼51K trainable parameters — over <strong>350×</strong> fewer
+        than existing skeleton-based and image-based approaches.
       </p>
     </div>
   </section>
 
-  <!-- METHOD -->
+  <!-- § 2 METHOD -->
   <section id="method">
     <div class="section-label">§ 2</div>
     <h2>Core Method</h2>
-    <p style="margin-bottom:4px;">
+    <p>
       DUAL-Pose formulates skeleton-based yoga pose recognition as learning a mapping
-      Φ : X → Y, where X ∈ ℝ<sup>L×V×3</sup> is a skeletal sequence of length L with V joints
-      (each with 3D coordinates), and Y is the set of pose labels. The pipeline has three
-      sequential stages.
+      Φ : X → Y, where X ∈ ℝ<sup>L×V×3</sup> is a skeletal sequence of length L with V joints,
+      each represented by (x, y, z) coordinates, and Y is the set of C pose labels.
+      The pipeline proceeds through three stages.
     </p>
 
     <div class="methods-grid">
       <div class="method-card fade-up">
-        <div class="method-icon">01 &nbsp; Alignment</div>
+        <div class="method-num">01</div>
         <h3>Canonical Alignment</h3>
         <p>
-          All joints are root-centred at the hip (u′ = u − u<sub>root</sub>), then rotated
-          to a canonical shoulder-axis reference (u″ = R<sub>can</sub> u′).
-          K synthetic yaw rotations θ<sub>k</sub> = 2πk/K are applied to generate
-          multi-orientation views, expanding viewpoint coverage without additional
-          data collection. A composite 212-dim feature per frame concatenates
-          3D joint positions, bone displacement vectors, and limb angles.
+          All joints are root-centred at the hip (u′ = u − u<sub>root</sub>), then rotated to
+          a canonical shoulder-axis reference (u″ = R<sub>can</sub> u′). K=16 evenly-spaced
+          synthetic yaw rotations θ<sub>k</sub> = 2πk/K expand viewpoint coverage. A 212-dim
+          feature per frame concatenates 3D joint positions, bone displacement vectors, and
+          limb angles via arccosine-based triplet features.
         </p>
       </div>
 
       <div class="method-card fade-up">
-        <div class="method-icon">02 &nbsp; Dual-Branch</div>
-        <h3>Graph Encoding</h3>
+        <div class="method-num">02</div>
+        <h3>Dual-Branch Graph Encoding</h3>
         <p>
-          A <strong>local GCN branch</strong> propagates features across anatomically
-          adjacent joints via a 2-layer graph convolution (96 hidden units each),
-          mean-pooling node embeddings to a 96-dim local embedding. A parallel
-          <strong>global MLP branch</strong> maps bone displacement and limb-angle
-          features to a 64-dim global kinematic embedding via learned linear
-          projection + layer normalisation. Both are fused to a 128-dim
-          latent pose representation.
+          A <strong>local GCN branch</strong> propagates features across anatomically adjacent
+          joints via 2 graph-convolutional layers (96 hidden units), mean-pooling node
+          embeddings to a 96-dim local embedding. A parallel <strong>global MLP branch</strong>
+          maps bone displacement + limb-angle features to a 64-dim kinematic embedding
+          via linear projection + layer normalisation. Both are fused to a 128-dim
+          latent representation.
         </p>
       </div>
 
       <div class="method-card fade-up">
-        <div class="method-icon">03 &nbsp; Aggregation</div>
-        <h3>Attention View Pooling</h3>
+        <div class="method-num">03</div>
+        <h3>Attention View Aggregation</h3>
         <p>
-          An attention mechanism computes scalar saliency ω<sub>τ</sub> = c<sup>⊤</sup>
-          tanh(W<sub>att</sub>e<sub>τ</sub> + b<sub>att</sub>) per view via a learned
-          context vector, normalised via softmax into weights γ<sub>τ</sub>. The global
-          pose embedding Z = Σ γ<sub>τ</sub>e<sub>τ</sub> selectively up-weights
-          orientations most discriminative for the given class. A 2-layer classifier
-          (128→64→C) with cross-entropy loss produces predictions.
+          A learned context vector computes scalar saliency ω<sub>τ</sub> per view,
+          normalised via softmax into weights γ<sub>τ</sub>. The final descriptor
+          Z = Σ γ<sub>τ</sub>e<sub>τ</sub> up-weights orientations most discriminative
+          for the given class. A two-layer classifier (128→64→C) with cross-entropy
+          loss produces the final prediction.
         </p>
       </div>
     </div>
 
-    <!-- Architecture Figure Placeholder -->
+    <!-- Architecture Figure -->
     <div class="figure-wrap" style="margin-top:28px;">
       <img src="dual_pose_arch.png" alt="DUAL-Pose Architecture"
            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
@@ -1032,21 +1171,21 @@ footer {
       <div class="figure-caption">
         <strong>Figure 1 &nbsp;·&nbsp;</strong>
         Illustration of the proposed DUAL-Pose framework. Branch 1 is the local GCN branch
-        encoding anatomical topology; Branch 2 is the global MLP branch encoding kinematic
-        context. Attention-based view aggregation combines N=16 synthetically yaw-rotated
-        views into a single discriminative pose descriptor.
+        encoding anatomical topology; Branch 2 is the global MLP branch encoding kinematic context.
+        Attention-based view aggregation combines N=16 synthetically yaw-rotated views into a single
+        discriminative pose descriptor classified by a two-layer head.
       </div>
     </div>
   </section>
 
-  <!-- ARCHITECTURE -->
+  <!-- § 3 ARCHITECTURE -->
   <section id="architecture">
     <div class="section-label">§ 3</div>
     <h2>Architecture Overview</h2>
-    <p style="margin-bottom:4px;">
-      DUAL-Pose is implemented in PyTorch and trained end-to-end on a single NVIDIA P100 GPU
-      using AdamW with cosine annealing over 100 epochs. Label smoothing (0.2) and dropout
-      (0.3) are applied in the classifier to counter overfitting.
+    <p>
+      Implemented in PyTorch and trained end-to-end on a single NVIDIA P100 GPU using AdamW
+      with cosine annealing over 100 epochs. Label smoothing (0.2) and dropout (0.3) are
+      applied in the classifier to counter overfitting on the small skeleton datasets.
     </p>
 
     <div class="arch-spec-grid">
@@ -1056,118 +1195,116 @@ footer {
       </div>
       <div class="arch-spec">
         <div class="arch-spec-value">212</div>
-        <div class="arch-spec-label">Feature Dim. per View</div>
+        <div class="arch-spec-label">Feature Dim. / View</div>
       </div>
       <div class="arch-spec">
         <div class="arch-spec-value">128</div>
         <div class="arch-spec-label">Latent Pose Dim.</div>
       </div>
       <div class="arch-spec">
-        <div class="arch-spec-value">51K</div>
+        <div class="arch-spec-value">∼51K</div>
         <div class="arch-spec-label">Trainable Params.</div>
       </div>
     </div>
 
-    <div style="margin-top:18px; background:var(--white); border:1px solid var(--cream-dk);
-                border-radius:var(--radius); padding:20px 22px; box-shadow:var(--shadow-sm);">
-      <p style="margin-bottom:10px; font-family:var(--mono); font-size:10px; letter-spacing:.1em;
-                text-transform:uppercase; color:var(--muted);">Pipeline Components</p>
-      <table style="min-width:0; font-size:13px; box-shadow:none;">
-        <thead>
-          <tr>
-            <th style="background:var(--navy-dark); text-align:left; padding:10px 12px;">Component</th>
-            <th style="background:var(--navy-dark); text-align:center; padding:10px 10px;">Detail</th>
-            <th style="background:var(--navy-dark); text-align:center; padding:10px 10px;">Output Dim.</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>Input feature</td><td style="text-align:center;">Joint positions + displacements + limb angles</td><td style="text-align:center;">212</td></tr>
-          <tr><td>GCN Branch (local)</td><td style="text-align:center;">2× GCN layers, 96 hidden units, mean-pool</td><td style="text-align:center;">96</td></tr>
-          <tr><td>MLP Branch (global)</td><td style="text-align:center;">2-layer linear, layer normalisation</td><td style="text-align:center;">64</td></tr>
-          <tr><td>Fused representation</td><td style="text-align:center;">Concat + linear projection</td><td style="text-align:center;">128</td></tr>
-          <tr><td>View aggregation</td><td style="text-align:center;">Learned soft-weight attention over K=16 views</td><td style="text-align:center;">128</td></tr>
-          <tr><td>Classifier head</td><td style="text-align:center;">128 → 64 → C (softmax)</td><td style="text-align:center;">C classes</td></tr>
-        </tbody>
-      </table>
+    <div class="pipeline-box">
+      <div class="pipe-label">Pipeline Components</div>
+      <div class="table-wrap" style="margin:0; box-shadow:none; border:1px solid var(--parch-dk);">
+        <table style="min-width:0;">
+          <thead>
+            <tr>
+              <th style="text-align:left; padding-left:14px;">Component</th>
+              <th>Detail</th>
+              <th>Output Dim.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Input feature</td><td>Joint positions + displacements + limb angles</td><td>212</td></tr>
+            <tr><td>GCN Branch (local)</td><td>2× GCN layers · 96 hidden units · mean-pool</td><td>96</td></tr>
+            <tr><td>MLP Branch (global)</td><td>2-layer linear · layer normalisation · ReLU</td><td>64</td></tr>
+            <tr><td>Fused representation</td><td>Concat + linear projection</td><td>128</td></tr>
+            <tr><td>View aggregation</td><td>Learned soft-weight attention over K=16 views</td><td>128</td></tr>
+            <tr><td>Classifier head</td><td>128 → 64 → C (softmax)</td><td>C classes</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 
-  <!-- DATASETS -->
+  <!-- § 4 DATASETS -->
   <section id="datasets">
     <div class="section-label">§ 4</div>
-    <h2>Datasets &amp; Evaluation</h2>
-    <p style="margin-bottom:4px;">
+    <h2>Datasets &amp; Evaluation Protocol</h2>
+    <p>
       All experiments use exclusively 3D skeletal keypoints — the (x, y, z) world coordinates
-      of 33 body landmarks output by MediaPipe BlazePose — with no RGB image data. This reflects
-      realistic deployment constraints in privacy-sensitive settings such as home fitness
-      and telehealth.
+      of 33 body landmarks output by MediaPipe BlazePose — with no RGB image data.
+      This reflects realistic deployment constraints in privacy-sensitive environments such as
+      home fitness and telehealth, where transmitting raw visual data may be impractical or
+      prohibited.
     </p>
 
     <div class="dataset-grid">
       <div class="dataset-card">
         <div class="dataset-name">Yoga-82</div>
-        <div class="dataset-stat">82</div>
-        <p style="font-size:13.5px; color:var(--muted); margin-bottom:8px;">Pose Classes</p>
+        <div class="dataset-stat">82 Classes</div>
         <div class="dataset-meta">
-          ∼11,100 training &nbsp;/&nbsp; ∼4,210 testing skeleton sequences.<br>
-          Fine-grained benchmark spanning static asanas differing in subtle joint alignments,
-          limb orientations, and bilateral symmetry. Non-photorealistic samples excluded
-          per standard cleaning protocols.
+          ∼11,100 training &nbsp;/&nbsp; ∼4,210 testing sequences.<br>
+          Large-scale fine-grained benchmark spanning static asanas distinguished by subtle
+          joint alignments, limb orientations, and bilateral symmetry. Non-photorealistic
+          samples excluded per standard cleaning protocols.
         </div>
       </div>
       <div class="dataset-card">
         <div class="dataset-name">Yoga-16</div>
-        <div class="dataset-stat">16</div>
-        <p style="font-size:13.5px; color:var(--muted); margin-bottom:8px;">Pose Classes</p>
+        <div class="dataset-stat">16 Classes</div>
         <div class="dataset-meta">
           891 training &nbsp;/&nbsp; 127 validation &nbsp;/&nbsp; 255 testing samples.<br>
-          Complementary benchmark probing generalisation under limited training data.
-          Examines whether DUAL-Pose sustains accuracy in data-scarce regimes without
+          Complementary benchmark probing generalisation under limited data. Examines
+          whether DUAL-Pose sustains high accuracy in data-scarce regimes without
           large pretrained backbones.
         </div>
       </div>
     </div>
 
-    <div style="margin-top:14px; background:var(--white); border:1px solid var(--cream-dk);
+    <div style="margin-top:14px; background:var(--white); border:1px solid var(--parch-dk);
                 border-radius:var(--radius); padding:16px 20px; box-shadow:var(--shadow-sm);">
-      <p style="font-size:13.5px; color:#2e3240; line-height:1.65;">
+      <p style="font-size:13.5px; color:#2a3226; line-height:1.65;">
         <strong style="font-family:var(--mono); font-size:10px; letter-spacing:.1em;
-                        text-transform:uppercase; color:var(--navy);">Evaluation Metrics &nbsp;—&nbsp;</strong>
-        Top-1 accuracy (%) with 95% Wilson confidence intervals (CI). Statistical significance of
-        pairwise differences assessed via two-proportion z-test (one-tailed, H1: DUAL-Pose > baseline):
-        <span class="sig-mark" style="font-size:12px;">‡‡‡</span> p&lt;0.001 &nbsp;
-        <span class="sig-mark" style="font-size:12px;">‡‡</span> p&lt;0.01 &nbsp;
-        <span class="sig-mark" style="font-size:12px;">‡</span> p&lt;0.05 &nbsp;
-        <sup style="font-family:var(--mono);font-size:10px;color:var(--muted);">ns</sup> not significant.
+                        text-transform:uppercase; color:var(--green);">Evaluation Metrics &nbsp;—&nbsp;</strong>
+        Top-1 accuracy (%) with 95% Wilson confidence intervals. Statistical significance via
+        two-proportion z-test (one-tailed, H1: DUAL-Pose > baseline):
+        &nbsp;<span class="sig-mark" style="font-size:12px;">‡‡‡</span> p&lt;0.001
+        &nbsp;<span class="sig-mark" style="font-size:12px;">‡‡</span> p&lt;0.01
+        &nbsp;<span class="sig-mark" style="font-size:12px;">‡</span> p&lt;0.05
+        &nbsp;<sup style="font-family:var(--mono);font-size:10px;color:var(--muted);">ns</sup> not significant.
         Model compactness measured by total trainable parameter count.
       </p>
     </div>
   </section>
 
-  <!-- RESULTS -->
+  <!-- § 5 RESULTS -->
   <section id="results">
     <div class="section-label">§ 5</div>
     <h2>Quantitative Results</h2>
 
     <div class="metrics-row">
-      <div class="metric-card">
-        <div class="metric-dataset">Yoga-82 &nbsp;—&nbsp; Skeleton-Based</div>
+      <div class="metric-card" data-bench="82">
+        <div class="metric-dataset">Yoga-82 &nbsp;·&nbsp; Skeleton-Based</div>
         <div class="metric-value">88.62%</div>
         <div class="metric-ci">95% CI &nbsp;[87.63, 89.54]</div>
         <div class="metric-delta">↑ +9.62% vs. Pose Tutor (skeleton SOTA)</div>
-        <div class="metric-params">51K params &nbsp;·&nbsp; 350× fewer than baselines</div>
+        <div class="metric-params">51K params · 350× fewer than any baseline</div>
       </div>
-      <div class="metric-card">
-        <div class="metric-dataset">Yoga-16 &nbsp;—&nbsp; All Methods</div>
+      <div class="metric-card" data-bench="16">
+        <div class="metric-dataset">Yoga-16 &nbsp;·&nbsp; All Methods</div>
         <div class="metric-value">97.25%</div>
         <div class="metric-ci">95% CI &nbsp;[94.44, 98.66]</div>
         <div class="metric-delta">↑ +1.16% vs. VGG16-Skeleton (skeleton SOTA)</div>
-        <div class="metric-params">50K params &nbsp;·&nbsp; 300× fewer than baselines</div>
+        <div class="metric-params">50K params · 300× fewer than any baseline</div>
       </div>
     </div>
 
-    <!-- Combined SOTA Table -->
-    <p class="muted-label">Table 1 &mdash; State-of-the-Art Comparison</p>
+    <p class="muted-label">Table 1 &mdash; State-of-the-Art Comparison on Yoga-82 &amp; Yoga-16</p>
     <div class="table-wrap">
       <table>
         <thead>
@@ -1182,16 +1319,9 @@ footer {
           </tr>
         </thead>
         <tbody>
-          <!-- Yoga-82 header -->
-          <tr class="section-head">
-            <td colspan="7">Yoga-82 &nbsp;(N = 4,210 test samples)</td>
-          </tr>
-          <!-- Image-based -->
-          <tr>
-            <td colspan="7" style="padding:5px 16px; font-size:11px; font-family:var(--mono);
-              letter-spacing:.08em; color:var(--muted); background:#fafbfc !important;
-              border-bottom:1px solid #eee;">Image-Based Methods</td>
-          </tr>
+          <tr class="section-head"><td colspan="7">Yoga-82 &nbsp;(N = 4,210 test samples)</td></tr>
+
+          <tr class="group-head"><td colspan="7">Image-Based Methods</td></tr>
           <tr>
             <td>DenseNet-201</td><td>DenseNet-201</td><td>Image</td><td>18.2M</td>
             <td>74.91</td><td>[73.58, 76.20]</td><td><span class="sig-mark">‡‡‡</span></td>
@@ -1202,19 +1332,16 @@ footer {
           </tr>
           <tr>
             <td>SYD-Net</td><td>MobileNetV2</td><td>Image</td><td>10.2M</td>
-            <td>96.00</td><td>[95.36, 96.55]</td><td><sup style="font-family:var(--mono);font-size:10px;color:var(--muted);">ns</sup></td>
+            <td>96.00</td><td>[95.36, 96.55]</td>
+            <td><sup style="font-family:var(--mono);font-size:10px;color:var(--muted);">ns</sup></td>
           </tr>
           <tr>
             <td>SYD-Net</td><td>Xception</td><td>Image</td><td>33.5M</td>
             <td><strong>97.29</strong></td><td>[96.75, 97.74]</td>
             <td><sup style="font-family:var(--mono);font-size:10px;color:var(--muted);">ns</sup></td>
           </tr>
-          <!-- Skeleton-based -->
-          <tr>
-            <td colspan="7" style="padding:5px 16px; font-size:11px; font-family:var(--mono);
-              letter-spacing:.08em; color:var(--muted); background:#fafbfc !important;
-              border-bottom:1px solid #eee;">Skeleton / Hybrid Methods</td>
-          </tr>
+
+          <tr class="group-head"><td colspan="7">Skeleton / Hybrid Methods</td></tr>
           <tr>
             <td>Pose Tutor</td><td>DenseNet + KNN</td><td>Skeleton</td><td>18.0M</td>
             <td>79.00</td><td>[77.74, 80.20]</td><td><span class="sig-mark">‡‡‡</span></td>
@@ -1225,26 +1352,15 @@ footer {
             <td class="best">88.62</td><td>[87.63, 89.54]</td><td>—</td>
           </tr>
 
-          <!-- Yoga-16 header -->
-          <tr class="section-head">
-            <td colspan="7">Yoga-16 &nbsp;(N = 255 test samples)</td>
-          </tr>
-          <!-- Image-based -->
-          <tr>
-            <td colspan="7" style="padding:5px 16px; font-size:11px; font-family:var(--mono);
-              letter-spacing:.08em; color:var(--muted); background:#fafbfc !important;
-              border-bottom:1px solid #eee;">Image-Based Methods</td>
-          </tr>
+          <tr class="section-head"><td colspan="7">Yoga-16 &nbsp;(N = 255 test samples)</td></tr>
+
+          <tr class="group-head"><td colspan="7">Image-Based Methods</td></tr>
           <tr>
             <td>VGG16-Image</td><td>VGG-16</td><td>Image</td><td>15.2M</td>
             <td>86.33</td><td>[81.57, 90.01]</td><td><span class="sig-mark">‡‡‡</span></td>
           </tr>
-          <!-- Skeleton-based -->
-          <tr>
-            <td colspan="7" style="padding:5px 16px; font-size:11px; font-family:var(--mono);
-              letter-spacing:.08em; color:var(--muted); background:#fafbfc !important;
-              border-bottom:1px solid #eee;">Skeleton / Hybrid Methods</td>
-          </tr>
+
+          <tr class="group-head"><td colspan="7">Skeleton / Hybrid Methods</td></tr>
           <tr>
             <td>VGG16-Skeleton</td><td>VGG-16</td><td>Skeleton</td><td>15.2M</td>
             <td>96.09</td><td>[92.95, 97.86]</td>
@@ -1262,34 +1378,33 @@ footer {
         </tbody>
       </table>
       <div class="table-caption">
-        <strong>Note:</strong> SYD-Net outperforms DUAL-Pose on Yoga-82 due to its RGB image modality advantage — the
-        one-tailed test H1 (DUAL-Pose &gt; baseline) is not supported (<sup style="font-size:10px;">ns</sup>),
-        which correctly reflects modality gap rather than model failure.
-        <strong>Bold</strong> denotes best within each modality group.
-        Significance markers are from a two-proportion z-test against DUAL-Pose as reference.
+        <strong>Note:</strong> SYD-Net outperforms DUAL-Pose on Yoga-82 due to its RGB image modality advantage;
+        the one-tailed H1 test is not supported (<sup style="font-size:10px;">ns</sup>), correctly reflecting modality
+        difference rather than model failure. <strong>Bold</strong> = best within modality group.
+        Significance markers reference DUAL-Pose as baseline via two-proportion z-test.
       </div>
     </div>
   </section>
 
-  <!-- ABLATION -->
+  <!-- § 6 ABLATION -->
   <section id="ablation">
     <div class="section-label">§ 6</div>
     <h2>Ablation Studies</h2>
-    <p style="margin-bottom:4px;">
-      Three orthogonal ablations on Yoga-82 validate each design decision: (i) branch contribution,
-      (ii) view-aggregation strategy, and (iii) multi-view synthesis. One component is varied
-      at a time; all other settings are held fixed.
+    <p>
+      Three orthogonal ablations on Yoga-82 (N=4,210) validate each design decision:
+      (i) branch contribution, (ii) view-aggregation strategy, and (iii) multi-view synthesis.
+      One component is varied at a time; all other settings are held fixed.
     </p>
 
     <div class="ablation-grid">
-      <!-- Table 2: Branch Ablation -->
+      <!-- Table 2 -->
       <div>
-        <p class="muted-label" style="margin-top:20px;">Table 2 &mdash; Branch Ablation (Yoga-82, N=4,210)</p>
+        <p class="muted-label" style="margin-top:18px;">Table 2 &mdash; Branch Ablation</p>
         <div class="table-wrap" style="margin-top:0;">
           <table style="min-width:0;">
             <thead>
               <tr>
-                <th>Configuration</th>
+                <th style="text-align:left; padding-left:12px;">Configuration</th>
                 <th>GCN</th>
                 <th>MLP</th>
                 <th>Params</th>
@@ -1319,21 +1434,21 @@ footer {
             </tbody>
           </table>
           <div class="table-caption">
-            The global (MLP) branch dominates (+8.75pp over GCN alone), confirming
-            that hand-crafted kinematic descriptors carry richer discriminative signal
-            for static yoga poses than raw positional graph convolutions.
+            The global (MLP) branch dominates (+8.75pp over GCN alone), confirming that
+            hand-crafted kinematic descriptors carry richer discriminative signal for
+            static yoga poses than raw positional graph convolutions alone.
           </div>
         </div>
       </div>
 
-      <!-- Table 3: View Aggregation -->
+      <!-- Table 3 -->
       <div>
-        <p class="muted-label" style="margin-top:20px;">Table 3 &mdash; View Aggregation (Yoga-82, N=4,210)</p>
+        <p class="muted-label" style="margin-top:18px;">Table 3 &mdash; View Aggregation</p>
         <div class="table-wrap" style="margin-top:0;">
           <table style="min-width:0;">
             <thead>
               <tr>
-                <th>Strategy</th>
+                <th style="text-align:left; padding-left:12px;">Strategy</th>
                 <th>Mechanism</th>
                 <th>Top-1 (%)</th>
                 <th>95% CI</th>
@@ -1361,22 +1476,20 @@ footer {
             </tbody>
           </table>
           <div class="table-caption">
-            Self-attention provides no gain over max pooling (+0.02%) because yoga
-            asanas are static — there is no sequential temporal dependency across views.
-            Learned soft-weight attention pooling achieves the best result (+0.71%
-            vs. max pooling), with no increase in model complexity.
+            Self-attention (+0.02% over max pooling) provides negligible gain since yoga
+            asanas are static — no sequential dependency exists across views. Learned
+            soft-weight attention pooling (+0.71% vs. max) wins with no added complexity.
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Figure 2: Multi-View Chart -->
+    <!-- Figure 2: Multi-View Bar Chart -->
     <p class="muted-label" style="margin-top:28px;">Figure 2 &mdash; Effect of Multi-View Synthesis (Yoga-82)</p>
 
     <div class="bar-chart-wrap">
-      <div class="bar-chart-title">Top-1 Accuracy (%) — Single-View (K=1) vs. Multi-View (K=16)</div>
+      <div class="bar-chart-title">Top-1 Accuracy (%) — Single-View (K=1, canonical) vs. Multi-View (K=16, yaw-rotated)</div>
 
-      <!-- Random Forest -->
       <div class="bar-group">
         <div class="bar-group-label">Random Forest</div>
         <div class="bar-row">
@@ -1388,12 +1501,11 @@ footer {
         <div class="bar-row">
           <div class="bar-label">w/ MV</div>
           <div class="bar-track">
-            <div class="bar-fill with" style="width:calc((87.79 - 85) / (90 - 85) * 100%);">87.79% &nbsp;(+0.66%)</div>
+            <div class="bar-fill with" style="width:calc((87.79 - 85) / (90 - 85) * 100%);">87.79% (+0.66%)</div>
           </div>
         </div>
       </div>
 
-      <!-- SVM -->
       <div class="bar-group">
         <div class="bar-group-label">SVM</div>
         <div class="bar-row">
@@ -1405,12 +1517,11 @@ footer {
         <div class="bar-row">
           <div class="bar-label">w/ MV</div>
           <div class="bar-track">
-            <div class="bar-fill with" style="width:calc((87.96 - 85) / (90 - 85) * 100%);">87.96% &nbsp;(+0.67%)</div>
+            <div class="bar-fill with" style="width:calc((87.96 - 85) / (90 - 85) * 100%);">87.96% (+0.67%)</div>
           </div>
         </div>
       </div>
 
-      <!-- DUAL-Pose -->
       <div class="bar-group">
         <div class="bar-group-label">DUAL-Pose (Ours)</div>
         <div class="bar-row">
@@ -1422,63 +1533,64 @@ footer {
         <div class="bar-row">
           <div class="bar-label">w/ MV</div>
           <div class="bar-track">
-            <div class="bar-fill ours-with" style="width:calc((88.62 - 85) / (90 - 85) * 100%);">88.62% &nbsp;(+0.33%)</div>
+            <div class="bar-fill ours-with" style="width:calc((88.62 - 85) / (90 - 85) * 100%);">88.62% (+0.33%)</div>
           </div>
         </div>
       </div>
 
       <div class="bar-legend">
         <div class="legend-item">
-          <div class="legend-swatch" style="background:rgba(12,71,130,.35);"></div>
-          Single-View (K=1, canonical orientation only)
+          <div class="legend-swatch" style="background:rgba(59,114,82,.4);"></div>
+          Single-View — traditional baselines
         </div>
         <div class="legend-item">
-          <div class="legend-swatch" style="background:var(--teal);"></div>
-          Multi-View (K=16, synthetic yaw rotations) — Traditional baselines
+          <div class="legend-swatch" style="background:var(--sage);"></div>
+          Multi-View — traditional baselines
         </div>
         <div class="legend-item">
-          <div class="legend-swatch" style="background:var(--navy);"></div>
+          <div class="legend-swatch" style="background:var(--green);"></div>
           DUAL-Pose single-view
         </div>
         <div class="legend-item">
-          <div class="legend-swatch" style="background:var(--gold);"></div>
+          <div class="legend-swatch" style="background:var(--amber);"></div>
           DUAL-Pose multi-view (proposed)
         </div>
       </div>
 
-      <p style="font-size:13px; color:var(--muted); font-style:italic; margin-top:14px; line-height:1.55;">
+      <p style="font-size:13px; color:var(--muted); font-style:italic; margin-top:14px; line-height:1.6;">
         DUAL-Pose single-view (88.29%) already surpasses the multi-view performance of both traditional
         baselines, confirming the advantage lies in the learned dual-branch representation rather than
-        augmentation alone. Adding multi-view synthesis provides further gain (+0.33%), with the
-        attention pooling mechanism learning to selectively weight the most informative orientations.
+        augmentation alone. Multi-view synthesis provides a further +0.33%; the attention pooling
+        mechanism learns to selectively weight the most informative orientations at aggregation time.
       </p>
     </div>
   </section>
 
-  <!-- CONCLUSION -->
+  <!-- § 7 CONCLUSION -->
   <section id="conclusion">
     <div class="section-label">§ 7</div>
     <h2>Conclusion</h2>
     <div class="conclusion-box">
       <p>
-        We proposed <strong style="color:var(--teal-lt);">DUAL-Pose</strong>, a lightweight
+        We proposed <strong style="color:var(--sage-lt);">DUAL-Pose</strong>, a lightweight
         dual-branch graph network for fine-grained skeleton-based yoga pose recognition
         operating on 3D skeletal coordinates alone, without RGB imagery or multimodal input.
         A GCN branch encodes local anatomical topology via graph-neighbourhood propagation,
         while a parallel MLP branch captures long-range kinematic context — bone displacement
-        vectors and limb angles — that graph convolutions cannot represent. An attention-based
-        view-aggregation module assigns learned soft weights over N=16 synthetically
-        yaw-rotated views, producing discriminative embeddings with improved viewpoint robustness.
+        vectors and limb angles — that graph convolutions alone cannot represent. An
+        attention-based view-aggregation module assigns learned soft weights over N=16
+        synthetically yaw-rotated views, producing discriminative embeddings with improved
+        viewpoint robustness.
       </p>
       <br>
       <p>
-        On <strong style="color:var(--teal-lt);">Yoga-82</strong> and
-        <strong style="color:var(--teal-lt);">Yoga-16</strong>, DUAL-Pose improves top-1
-        accuracy by up to <strong style="color:var(--teal-lt);">+9.62%</strong> and
-        <strong style="color:var(--teal-lt);">+1.16%</strong> over the strongest skeleton-based
-        baselines respectively, using only ∼<strong style="color:var(--teal-lt);">51K parameters</strong>
-        — over <strong style="color:var(--teal-lt);">350×</strong> fewer than contemporary methods
-        — enabling practical deployment on edge hardware, wearable processors, and
+        On <strong style="color:var(--sage-lt);">Yoga-82</strong> and
+        <strong style="color:var(--sage-lt);">Yoga-16</strong>, DUAL-Pose improves top-1
+        accuracy by up to <strong style="color:var(--amber-lt);">+9.62%</strong> and
+        <strong style="color:var(--amber-lt);">+1.16%</strong> over the strongest skeleton-based
+        baselines, using only ∼<strong style="color:var(--amber-lt);">51K parameters</strong>
+        — over <strong style="color:var(--amber-lt);">350×</strong> fewer than contemporary
+        methods — enabling practical deployment on edge hardware, wearable processors, and
         resource-constrained platforms.
       </p>
       <div class="future-tag">
@@ -1487,11 +1599,11 @@ footer {
     </div>
   </section>
 
-</div>
+</div><!-- /container -->
 
 <footer>
   © 2026 &nbsp;·&nbsp; DUAL-Pose &nbsp;·&nbsp; IIT Madras Zanzibar &nbsp;·&nbsp;
-  Rashi Niyas P, Hitika Tiwari, Tushar Shinde
+  Rashi Niyas P &nbsp;·&nbsp; Hitika Tiwari &nbsp;·&nbsp; Tushar Shinde
 </footer>
 
 </body>
