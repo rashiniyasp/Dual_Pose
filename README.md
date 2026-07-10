@@ -1,6 +1,8 @@
 # DUAL-Pose: Efficient Dual-Branch Graph Networks for Skeleton-Based Yoga Pose Recognition
 
 **Accepted at CVPR Workshops 2026**
+[CVPRw](https://openaccess.thecvf.com/content/CVPR2026W/SAUAFG/html/P_DUAL-Pose_Efficient_Dual-Branch_Graph_Networks_for_Skeleton-Based_Yoga_Pose_Recognition_CVPRW_2026_paper.html)
+
 ---
 
 ## Overview
