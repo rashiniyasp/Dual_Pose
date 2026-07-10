@@ -29,8 +29,7 @@ Both branches process **16 synthetic yaw-rotated views** of each pose, aggregate
 ## 🌐 Live Web Demo
 
 DUAL-Pose includes a privacy-preserving, 100% client-side web application for live yoga pose classification! 
-It runs the DUAL-Pose model directly in your browser using ONNX Web Runtime—**no backend server required**. 
-The video feed never leaves your device. Only the extracted skeleton is rendered on a clean white canvas.
+It runs the DUAL-Pose model directly in your browser using ONNX Web Runtime— Only the extracted skeleton is rendered on a clean white canvas.
 
 **Try it out locally:**
 1. Navigate to the `static` directory.
