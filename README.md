@@ -34,7 +34,7 @@ It runs the DUAL-Pose model directly in your browser using ONNX Web Runtime— O
 **Try it out locally:**
 1. Navigate to the `static` directory.
 2. Double-click [index.html](static/index.html) to open it in your browser.
-*(If you are hosting this project on GitHub Pages, the demo will be available live at `https://[your-username].github.io/DUAL-Pose-GitHub/DUAL-Pose/Dual_Pose/static/index.html`)*
+*(If you are hosting this project on GitHub Pages, the demo will be available live at `https://[your-username].github.io/Dual_Pose/static/index.html`)*
 
 ## Repository Structure
 
