@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DUAL-Pose Live Yoga</title>
-    <!-- Google Fonts for Modern Typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- ONNX Runtime Web CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-    
+    <title>DUAL-Pose | Live Yoga Recognition</title>
+    <meta name="description" content="Privacy-preserving live yoga pose recognition using DUAL-Pose AI. No video is stored or sent to any server.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- ONNX Runtime Web -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,6 +15,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="brand">
+                <div class="brand-logo">🧘</div>
                 <h1>DUAL-Pose</h1>
                 <p>Privacy-Preserving AI</p>
             </div>
@@ -24,13 +23,17 @@
             <div class="control-group">
                 <h3>1. Select Model</h3>
                 <div class="radio-group">
-                    <label class="radio-card active">
+                    <label class="radio-card active" id="label-yoga16">
                         <input type="radio" name="model" value="yoga16" checked>
-                        <span>Yoga 16</span>
+                        <span class="radio-icon">🏆</span>
+                        <span class="radio-title">Yoga 16</span>
+                        <span class="radio-desc">97.25% acc</span>
                     </label>
-                    <label class="radio-card">
+                    <label class="radio-card" id="label-yoga82">
                         <input type="radio" name="model" value="yoga82">
-                        <span>Yoga 82</span>
+                        <span class="radio-icon">🌟</span>
+                        <span class="radio-title">Yoga 82</span>
+                        <span class="radio-desc">88.62% acc</span>
                     </label>
                 </div>
             </div>
@@ -38,63 +41,94 @@
             <div class="control-group">
                 <h3>2. Input Source</h3>
                 <div class="radio-group">
-                    <label class="radio-card active" id="btn-live">
+                    <label class="radio-card active" id="label-live">
                         <input type="radio" name="input-source" value="live" checked>
-                        <span>Webcam</span>
+                        <span class="radio-icon">📷</span>
+                        <span class="radio-title">Webcam</span>
+                        <span class="radio-desc">Live</span>
                     </label>
-                    <label class="radio-card" id="btn-video">
+                    <label class="radio-card" id="label-video">
                         <input type="radio" name="input-source" value="video">
-                        <span>Video File</span>
+                        <span class="radio-icon">🎬</span>
+                        <span class="radio-title">Video</span>
+                        <span class="radio-desc">Upload</span>
                     </label>
                 </div>
-                <!-- Hidden file input -->
                 <input type="file" id="video-upload" accept="video/*" style="display: none;">
             </div>
 
+            <!-- Start Button -->
+            <button id="start-btn" class="start-btn">
+                <span>▶</span> Start Camera
+            </button>
+
             <div class="control-group">
-                <h3>3. Recording</h3>
-                <button id="record-btn" class="action-btn">
-                    <span class="icon">⏺</span> Record Privacy Video
+                <h3>3. Save Skeleton Video</h3>
+                <p class="privacy-note">🔒 Only skeleton saved — no raw video</p>
+                <button id="record-btn" class="action-btn" disabled>
+                    <span class="icon">⏺</span> Record
                 </button>
             </div>
 
-            <!-- Gallery for Yoga 16 -->
+            <!-- Pose References -->
             <div class="gallery-container" id="gallery-container">
                 <h3>Pose References</h3>
-                <div class="gallery" id="reference-gallery">
-                    <!-- Javascript will populate this with standard poses -->
-                </div>
+                <div class="gallery" id="reference-gallery"></div>
             </div>
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
-            <div class="header">
-                <h2>Live Detection</h2>
+            <div class="top-bar">
+                <div class="title-section">
+                    <h2>Live Detection</h2>
+                    <span class="status-dot" id="status-dot"></span>
+                </div>
                 <div class="prediction-badge" id="prediction-badge">
                     Waiting for input...
                 </div>
             </div>
 
-            <div class="video-container">
-                <!-- The hidden actual video -->
+            <div class="video-wrapper">
+                <!-- Hidden video element (privacy: user never sees raw video) -->
                 <video id="input-video" autoplay playsinline muted></video>
-                <!-- The canvas for rendering the red/green skeleton -->
+
+                <!-- White canvas showing skeleton only -->
                 <canvas id="output-canvas"></canvas>
-                <!-- Status Overlay -->
+
+                <!-- Status/Overlay messages -->
                 <div id="status-overlay" class="overlay">
-                    <p>Loading AI Models...</p>
+                    <div class="overlay-content">
+                        <div class="overlay-icon" id="overlay-icon">🧘</div>
+                        <p id="overlay-text">Loading AI Models...</p>
+                        <div class="loading-bar" id="loading-bar">
+                            <div class="loading-fill" id="loading-fill"></div>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Body framing feedback -->
+                <div id="framing-alert" class="framing-alert" style="display:none;"></div>
             </div>
-            
-            <div class="explainability-panel">
-                <h4>Explainability Heatmap</h4>
-                <p>Joints highlighted in <span style="color: #ff3366;">Red</span> had the highest activation variance during classification.</p>
+
+            <!-- Confidence & Explainability Bar -->
+            <div class="bottom-panel">
+                <div class="confidence-section">
+                    <span class="panel-label">Confidence</span>
+                    <div class="confidence-bar-wrap">
+                        <div class="confidence-bar" id="confidence-bar"></div>
+                    </div>
+                    <span class="confidence-val" id="confidence-val">--</span>
+                </div>
+                <div class="explainability-section">
+                    <span class="panel-label">🔴 Key joints for this prediction</span>
+                    <span id="key-joints-text" class="key-joints">Shoulders · Hips · Knees</span>
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- Import Base64 Models File -->
+    <!-- Models (base64 ONNX) -->
     <script src="models.js"></script>
     <script type="module" src="script.js"></script>
 </body>
