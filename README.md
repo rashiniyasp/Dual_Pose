@@ -87,13 +87,14 @@ If you use this code or data, please cite:
 ```bibtex
 
 
-@InProceedings{Rashi26Dual,
-  author    = {Radhi Niyas P., H. Tiwari, and Tushar Shinde},
-  title     = {Dual-branch Unified Aggregation for Latent Pose Representation},
-  booktitle = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshop},
-  year      = {2026},
+@InProceedings{P_2026_CVPR,
+    author    = {P, Rashi Niyas and Tiwari, Hitika and Shinde, Tushar},
+    title     = {DUAL-Pose: Efficient Dual-Branch Graph Networks for Skeleton-Based Yoga Pose Recognition},
+    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshops},
+    month     = {June},
+    year      = {2026},
+    pages     = {8884-8893}
 }
-
 
 ```
 
