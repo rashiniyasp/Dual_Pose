@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DUAL-Pose Live Yoga</title>
+    <!-- Google Fonts for Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- MediaPipe Tasks Vision CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
+    <!-- ONNX Runtime Web CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>DUAL-Pose</h1>
+                <p>Privacy-Preserving AI</p>
+            </div>
+
+            <div class="control-group">
+                <h3>1. Select Model</h3>
+                <div class="radio-group">
+                    <label class="radio-card active">
+                        <input type="radio" name="model" value="yoga16" checked>
+                        <span>Yoga 16</span>
+                    </label>
+                    <label class="radio-card">
+                        <input type="radio" name="model" value="yoga82">
+                        <span>Yoga 82</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>2. Input Source</h3>
+                <div class="radio-group">
+                    <label class="radio-card active" id="btn-live">
+                        <input type="radio" name="input-source" value="live" checked>
+                        <span>Webcam</span>
+                    </label>
+                    <label class="radio-card" id="btn-video">
+                        <input type="radio" name="input-source" value="video">
+                        <span>Video File</span>
+                    </label>
+                </div>
+                <!-- Hidden file input -->
+                <input type="file" id="video-upload" accept="video/*" style="display: none;">
+            </div>
+
+            <div class="control-group">
+                <h3>3. Recording</h3>
+                <button id="record-btn" class="action-btn">
+                    <span class="icon">⏺</span> Record Privacy Video
+                </button>
+            </div>
+
+            <!-- Gallery for Yoga 16 -->
+            <div class="gallery-container" id="gallery-container">
+                <h3>Pose References</h3>
+                <div class="gallery" id="reference-gallery">
+                    <!-- Javascript will populate this with standard poses -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h2>Live Detection</h2>
+                <div class="prediction-badge" id="prediction-badge">
+                    Waiting for input...
+                </div>
+            </div>
+
+            <div class="video-container">
+                <!-- The hidden actual video -->
+                <video id="input-video" autoplay playsinline muted></video>
+                <!-- The canvas for rendering the red/green skeleton -->
+                <canvas id="output-canvas"></canvas>
+                <!-- Status Overlay -->
+                <div id="status-overlay" class="overlay">
+                    <p>Loading AI Models...</p>
+                </div>
+            </div>
+            
+            <div class="explainability-panel">
+                <h4>Explainability Heatmap</h4>
+                <p>Joints highlighted in <span style="color: #ff3366;">Red</span> had the highest activation variance during classification.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Import Base64 Models File -->
+    <script src="models.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -44,12 +44,12 @@ def fit(model, train_loader, val_loader, cfg: dict,
     device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model     = model.to(device)
 
-    optimiser = torch.optim.Adam(model.parameters(),
-                                 lr=cfg["lr"],
-                                 weight_decay=cfg.get("weight_decay", 1e-4))
+    optimiser = torch.optim.AdamW(model.parameters(),
+                                 lr=cfg.get("lr", 0.001),
+                                 weight_decay=1e-3)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
                     optimiser, T_max=cfg["epochs"])
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.2)
     stopper   = EarlyStopping(cfg["patience"], checkpoint_path=ckpt_path)
 
     history = {"train_loss": [], "val_loss": [],
@@ -62,6 +62,13 @@ def fit(model, train_loader, val_loader, cfg: dict,
         run_loss, correct, total = 0.0, 0, 0
         for kp, gf, labels in train_loader:
             kp, gf, labels = kp.to(device), gf.to(device), labels.to(device)
+            
+            # Explicit Noise Augmentation on Features (Optional but helpful)
+            kp_noise = torch.randn_like(kp) * 0.01
+            kp = kp + kp_noise
+            gf_noise = torch.randn_like(gf) * 0.01
+            gf = gf + gf_noise
+
             optimiser.zero_grad()
             logits = model(kp, gf)
             loss   = criterion(logits, labels)
@@ -125,4 +132,4 @@ def plot_history(history: dict, save_path: str = "results/training_curve.png"):
     plt.tight_layout()
     plt.savefig(save_path, dpi=150)
     plt.close()
-    print(f"Saved training curve → {save_path}")
+    print(f"Saved training curve -> {save_path}")

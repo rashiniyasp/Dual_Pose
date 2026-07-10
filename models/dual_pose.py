@@ -1,116 +1,128 @@
-"""
-DUAL-Pose model:
-  GCN branch  → local anatomical topology
-  MLP branch  → global geometric relations (113-D features)
-  Attention-based aggregation over num_views synthetic yaw rotations
-"""
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models.gcn_layers import GCNLayer
 
-
-class GCNBranch(nn.Module):
-    """Two GCN layers → global average pool → embedding."""
-
-    def __init__(self, in_features: int = 3, hidden: int = 32,
-                 embed_dim: int = 64, num_joints: int = 33,
-                 dropout: float = 0.3):
+# ---- GCN Layer ----
+class GCNLayer(nn.Module):
+    def __init__(self, in_feats, out_feats):
         super().__init__()
-        self.gcn1 = GCNLayer(in_features, hidden, num_joints)
-        self.gcn2 = GCNLayer(hidden, embed_dim, num_joints)
-        self.drop = nn.Dropout(dropout)
+        self.linear = nn.Linear(in_feats, out_feats)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (B, N, 3)
-        h = self.gcn1(x)
-        h = self.drop(h)
-        h = self.gcn2(h)            # (B, N, embed_dim)
-        return h.mean(dim=1)        # global avg pool → (B, embed_dim)
+    def forward(self, x, A_hat):
+        x = torch.einsum('ij,bjk->bik', A_hat, x)
+        return self.linear(x)
+
+def build_adjacency_matrix(num_nodes=33):
+    try:
+        import mediapipe as mp
+        connections = list(mp.solutions.pose.POSE_CONNECTIONS)
+    except Exception:
+        connections = []
+
+    A = torch.zeros(num_nodes, num_nodes)
+    for i, j in connections:
+        if i < num_nodes and j < num_nodes:
+            A[i, j] = 1
+            A[j, i] = 1
+    A += torch.eye(num_nodes)
+
+    deg = A.sum(dim=1)
+    A_hat = torch.diag(1.0 / deg) @ A
+    return A_hat
 
 
-class MLPBranch(nn.Module):
-    """Two-layer MLP on 113-D global features → embedding."""
-
-    def __init__(self, in_features: int = 113, hidden: int = 64,
-                 embed_dim: int = 64, dropout: float = 0.3):
+class GCN_Attention_MLP(nn.Module):
+    def __init__(self,
+                 input_dim=212,
+                 num_nodes=33,
+                 gcn_hidden=128,
+                 global_feat_dim=113,
+                 global_hidden=64,
+                 latent_dim=128,
+                 clf_hidden=128,
+                 num_classes=82):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(in_features, hidden),
-            nn.BatchNorm1d(hidden),
-            nn.ReLU(inplace=True),
-            nn.Dropout(dropout),
-            nn.Linear(hidden, embed_dim),
-            nn.BatchNorm1d(embed_dim),
-            nn.ReLU(inplace=True),
+
+        A_hat = build_adjacency_matrix(num_nodes)
+        self.register_buffer('A_hat', A_hat)
+
+        # GCN encoder
+        self.gcn1 = GCNLayer(3, gcn_hidden)
+        self.gcn2 = GCNLayer(gcn_hidden, gcn_hidden)
+        self.node_ln = nn.LayerNorm(gcn_hidden)
+
+        # Global features
+        self.global_mlp = nn.Sequential(
+            nn.Linear(global_feat_dim, global_hidden),
+            nn.ReLU(),
+            nn.LayerNorm(global_hidden)
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x)   # (B, embed_dim)
+        # Frame embedding
+        self.readout = nn.Sequential(
+            nn.Linear(gcn_hidden + global_hidden, latent_dim),
+            nn.ReLU(),
+            nn.LayerNorm(latent_dim)
+        )
 
+        # Attention pooling
+        self.attn = nn.Linear(latent_dim, 1)
 
-class DualPose(nn.Module):
-    """
-    Args:
-        num_classes : number of pose categories (82 for Yoga-82, 16 for Yoga-16)
-        num_joints  : 33 (BlazePose)
-        gcn_hidden  : hidden dim inside GCN branch
-        mlp_hidden  : hidden dim inside MLP branch
-        embed_dim   : embedding dim for each branch
-        global_dim  : dimensionality of global feature vector (default 113)
-        num_views   : number of synthetic yaw-rotation views
-        dropout     : dropout probability
+        # Classifier
+        self.classifier = nn.Sequential(
+            nn.Linear(latent_dim, clf_hidden),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(clf_hidden, num_classes)
+        )
 
-    Forward inputs:
-        kp_views  : (B, V, N, 3)   skeleton views
-        gf_views  : (B, V, global_dim) global features per view
+    def forward(self, x):
+        # x: [B,16,212]
+        B, T, D = x.shape
+        x = x.view(B * T, D)
 
-    Returns:
-        logits    : (B, num_classes)
-    """
+        coords = x[:, :99].view(B * T, 33, 3)
+        global_feats = x[:, 99:]
 
-    def __init__(self, num_classes: int, num_joints: int = 33,
-                 gcn_hidden: int = 32, mlp_hidden: int = 64,
-                 embed_dim: int = 64, global_dim: int = 113,
-                 num_views: int = 16, dropout: float = 0.3):
-        super().__init__()
-        self.num_views = num_views
+        A_hat = self.A_hat.to(x.device)
 
-        self.gcn_branch = GCNBranch(3, gcn_hidden, embed_dim,
-                                    num_joints, dropout)
-        self.mlp_branch = MLPBranch(global_dim, mlp_hidden, embed_dim,
-                                    dropout)
+        h = F.relu(self.gcn1(coords, A_hat))
+        h = F.relu(self.gcn2(h, A_hat))
+        h = h.mean(dim=1)
+        h = self.node_ln(h)
 
-        # per-view classifier head
-        self.classifier = nn.Linear(embed_dim * 2, num_classes)
+        g = self.global_mlp(global_feats)
 
-        # attention over views: 1 scalar weight per view per sample
-        self.attn_fc = nn.Linear(embed_dim * 2, 1)
+        frame_emb = self.readout(torch.cat([h, g], dim=1))
+        frame_emb = frame_emb.view(B, T, -1)
 
-    def forward(self, kp_views: torch.Tensor,
-                gf_views: torch.Tensor) -> torch.Tensor:
-        B, V, N, C = kp_views.shape
+        # Attention pooling
+        scores = self.attn(frame_emb).squeeze(-1)
+        weights = torch.softmax(scores, dim=1).unsqueeze(-1)
+        pooled = torch.sum(weights * frame_emb, dim=1)
 
-        # flatten view dimension into batch for branch forward passes
-        kp_flat = kp_views.reshape(B * V, N, C)
-        gf_flat = gf_views.reshape(B * V, -1)
-
-        gcn_emb = self.gcn_branch(kp_flat)   # (B*V, embed_dim)
-        mlp_emb = self.mlp_branch(gf_flat)   # (B*V, embed_dim)
-
-        fused = torch.cat([gcn_emb, mlp_emb], dim=-1)  # (B*V, embed_dim*2)
-
-        # attention weights
-        attn_w = self.attn_fc(fused).reshape(B, V)      # (B, V)
-        attn_w = F.softmax(attn_w, dim=1).unsqueeze(-1) # (B, V, 1)
-
-        # weighted sum over views
-        fused = fused.reshape(B, V, -1)                  # (B, V, E)
-        agg   = (attn_w * fused).sum(dim=1)              # (B, E)
-
-        return self.classifier(agg)                      # (B, num_classes)
-
+        return self.classifier(pooled)
 
 def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+class DualPose(nn.Module):
+    def __init__(self, num_classes: int, **kwargs):
+        super().__init__()
+        # Creating model according to user's specified hyperparameters
+        self.model = GCN_Attention_MLP(
+            input_dim=212,
+            num_nodes=33,
+            gcn_hidden=96,
+            global_feat_dim=113,
+            global_hidden=64,
+            latent_dim=128,
+            clf_hidden=64,
+            num_classes=num_classes
+        )
+
+    def forward(self, kp_views, gf_views):
+        B, V = kp_views.shape[:2]
+        kp_flat = kp_views.reshape(B, V, -1)
+        x = torch.cat([kp_flat, gf_views], dim=-1) # [B, 16, 212]
+        return self.model(x)

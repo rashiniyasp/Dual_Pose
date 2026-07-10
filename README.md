@@ -21,10 +21,21 @@ Both branches process **16 synthetic yaw-rotated views** of each pose, aggregate
 
 ## Results
 
-| Dataset  | Top-1 Acc | Parameters |
-|----------|-----------|------------|
-| Yoga-82  | 88.62%    | ~51K       |
-| Yoga-16  | 97.25%    | ~51K       |
+| Dataset  | Top-1 Acc | Parameters | GFLOPs  | Inference Latency |
+|----------|-----------|------------|---------|-------------------|
+| Yoga-82  | 88.62%    | 51,891     | 5.50 M  | 1.66 ms / sample  |
+| Yoga-16  | 97.25%    | 47,601     | 5.49 M  | 0.79 ms / sample  |
+
+## 🌐 Live Web Demo
+
+DUAL-Pose includes a privacy-preserving, 100% client-side web application for live yoga pose classification! 
+It runs the DUAL-Pose model directly in your browser using ONNX Web Runtime—**no backend server required**. 
+The video feed never leaves your device. Only the extracted skeleton is rendered on a clean white canvas.
+
+**Try it out locally:**
+1. Navigate to the `static` directory.
+2. Double-click [index.html](static/index.html) to open it in your browser.
+*(If you are hosting this project on GitHub Pages, the demo will be available live at `https://[your-username].github.io/DUAL-Pose-GitHub/DUAL-Pose/Dual_Pose/static/index.html`)*
 
 ## Repository Structure
 
