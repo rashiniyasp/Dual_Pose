@@ -1,7 +1,10 @@
 # DUAL-Pose: Efficient Dual-Branch Graph Networks for Skeleton-Based Yoga Pose Recognition
 
 **Accepted at CVPR Workshops 2026**
-[CVPRw](https://openaccess.thecvf.com/content/CVPR2026W/SAUAFG/html/P_DUAL-Pose_Efficient_Dual-Branch_Graph_Networks_for_Skeleton-Based_Yoga_Pose_Recognition_CVPRW_2026_paper.html)
+
+[CVPRw Paper Link](https://openaccess.thecvf.com/content/CVPR2026W/SAUAFG/html/P_DUAL-Pose_Efficient_Dual-Branch_Graph_Networks_for_Skeleton-Based_Yoga_Pose_Recognition_CVPRW_2026_paper.html) 
+
+[Website](https://rashiniyasp.github.io/Dual_Pose/)
 
 🌐 **[Try the Live Web Demo!](https://rashiniyasp.github.io/Dual_Pose/static/index.html)**  
 Experience DUAL-Pose in real-time right in your browser. This 100% client-side web application preserves privacy by processing everything locally without sending video data to any server.
@@ -33,11 +36,6 @@ Both branches process **16 synthetic yaw-rotated views** of each pose, aggregate
 
 DUAL-Pose includes a privacy-preserving, 100% client-side web application for live yoga pose classification! 
 It runs the DUAL-Pose model directly in your browser using ONNX Web Runtime— Only the extracted skeleton is rendered on a clean white canvas.
-
-**Try it out locally:**
-1. Navigate to the `static` directory.
-2. Double-click [index.html](static/index.html) to open it in your browser.
-*(If you are hosting this project on GitHub Pages, the demo will be available live at `https://[your-username].github.io/Dual_Pose/static/index.html`)*
 
 ## Repository Structure
 
