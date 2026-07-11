@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DUAL-Pose | Live Yoga Recognition</title>
-    <meta name="description" content="Privacy-preserving live yoga pose recognition using DUAL-Pose AI. No video is stored or sent to any server.">
+    <title>DUAL-Pose | Single Image Yoga Recognition</title>
+    <meta name="description" content="Privacy-preserving single image yoga pose recognition using DUAL-Pose AI. No images are stored or sent to any server.">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- ONNX Runtime Web -->
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
@@ -41,32 +41,32 @@
             <div class="control-group">
                 <h3>2. Input Source</h3>
                 <div class="radio-group">
-                    <label class="radio-card active" id="label-live">
-                        <input type="radio" name="input-source" value="live" checked>
+                    <label class="radio-card active" id="label-camera">
+                        <input type="radio" name="input-source" value="camera" checked>
                         <span class="radio-icon">📷</span>
-                        <span class="radio-title">Webcam</span>
-                        <span class="radio-desc">Live</span>
+                        <span class="radio-title">Camera</span>
+                        <span class="radio-desc">Live Capture</span>
                     </label>
-                    <label class="radio-card" id="label-video">
-                        <input type="radio" name="input-source" value="video">
-                        <span class="radio-icon">🎬</span>
-                        <span class="radio-title">Video</span>
-                        <span class="radio-desc">Upload</span>
+                    <label class="radio-card" id="label-upload">
+                        <input type="radio" name="input-source" value="upload">
+                        <span class="radio-icon">🖼️</span>
+                        <span class="radio-title">Upload</span>
+                        <span class="radio-desc">Photo File</span>
                     </label>
                 </div>
-                <input type="file" id="video-upload" accept="video/*" style="display: none;">
+                <input type="file" id="image-upload" accept="image/*" style="display: none;">
             </div>
 
-            <!-- Start Button -->
-            <button id="start-btn" class="start-btn">
-                <span>▶</span> Start Camera
+            <!-- Action Buttons -->
+            <button id="main-action-btn" class="start-btn">
+                <span>📸</span> Start Camera (5s Delay)
             </button>
 
             <div class="control-group">
-                <h3>3. Save Skeleton Video</h3>
-                <p class="privacy-note">🔒 Only skeleton saved — no raw video</p>
-                <button id="record-btn" class="action-btn" disabled>
-                    <span class="icon">⏺</span> Record
+                <h3>3. Save Results</h3>
+                <p class="privacy-note">🔒 Only skeleton image saved — privacy preserved</p>
+                <button id="download-btn" class="action-btn" disabled>
+                    <span class="icon">💾</span> Download Skeleton Image
                 </button>
             </div>
 
@@ -81,19 +81,21 @@
         <main class="main-content">
             <div class="top-bar">
                 <div class="title-section">
-                    <h2>Live Detection</h2>
-                    <span class="status-dot" id="status-dot"></span>
+                    <h2>Pose Analysis</h2>
                 </div>
                 <div class="prediction-badge" id="prediction-badge">
                     Waiting for input...
                 </div>
             </div>
 
-            <div class="video-wrapper">
-                <!-- Hidden video element (privacy: user never sees raw video) -->
-                <video id="input-video" autoplay playsinline muted></video>
+            <div class="video-wrapper" id="capture-container">
+                <!-- Hidden video element for webcam feed -->
+                <video id="input-video" autoplay playsinline muted style="display: none;"></video>
+                
+                <!-- Hidden image element for uploaded files -->
+                <img id="input-image" style="display: none;" crossorigin="anonymous">
 
-                <!-- White canvas showing skeleton only -->
+                <!-- User-facing canvas: displays webcam preview OR final skeleton on white background -->
                 <canvas id="output-canvas"></canvas>
 
                 <!-- Status/Overlay messages -->
@@ -105,6 +107,12 @@
                             <div class="loading-fill" id="loading-fill"></div>
                         </div>
                     </div>
+                </div>
+
+                <!-- 5 Second Countdown Overlay -->
+                <div id="countdown-overlay" class="overlay" style="display: none; background: rgba(0,0,0,0.6);">
+                    <div class="countdown-number" id="countdown-number">5</div>
+                    <p style="color: white; font-size: 1.5rem; margin-top: 10px;">Get ready!</p>
                 </div>
 
                 <!-- Body framing feedback -->

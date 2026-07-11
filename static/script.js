@@ -5,7 +5,6 @@ const YOGA_82_CLASSES = ['Akarna_Dhanurasana','Bharadvajas_Twist_pose_or_Bharadv
 
 const YOGA_16_CLASSES = ['chair_pose','dolphin_plank_pose','downward-facing_dog_pose','fish_pose','goddess_pose','locust_pose','lord_of_the_dance_pose','low_lunge_pose','seated_forward_bend_pose','side_plank_pose','staff_pose','tree_pose','warrior_1_pose','warrior_2_pose','warrior_3_pose','wide-angle_seated_forward_bend_pose'];
 
-// Reference emojis for Yoga 16 poses
 const YOGA_16_REFS = [
     { name: 'chair_pose',          emoji: '🪑', desc: 'Sit as if in a chair, arms up' },
     { name: 'dolphin_plank_pose',  emoji: '🐬', desc: 'Forearms on floor, body straight' },
@@ -25,7 +24,6 @@ const YOGA_16_REFS = [
     { name: 'wide-angle_seated_forward_bend_pose', emoji: '🦵', desc: 'Legs wide open, lean forward' },
 ];
 
-// ── SKELETON CONNECTIONS ──
 const CONNECTIONS = [
     [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],
     [9,10],[11,12],[11,13],[13,15],[15,17],[15,19],[15,21],
@@ -39,40 +37,38 @@ const ANGLE_TRIPLETS = [
     [24,26,28],[12,24,26],[23,25,27],[11,23,25]
 ];
 
-// Key joints for explainability (shoulders=11,12  hips=23,24  knees=25,26)
 const HIGHLIGHT_JOINTS = [11, 12, 23, 24, 25, 26];
 
 // ── UI ELEMENTS ──
-const videoEl       = document.getElementById('input-video');
-const canvasEl      = document.getElementById('output-canvas');
-const ctx           = canvasEl.getContext('2d');
-const overlayEl     = document.getElementById('status-overlay');
-const overlayIcon   = document.getElementById('overlay-icon');
-const overlayText   = document.getElementById('overlay-text');
-const badgeEl       = document.getElementById('prediction-badge');
-const recordBtn     = document.getElementById('record-btn');
-const startBtn      = document.getElementById('start-btn');
-const galleryEl     = document.getElementById('reference-gallery');
-const videoUploadEl = document.getElementById('video-upload');
-const framingAlert  = document.getElementById('framing-alert');
-const statusDot     = document.getElementById('status-dot');
-const confidenceBar = document.getElementById('confidence-bar');
-const confidenceVal = document.getElementById('confidence-val');
+const videoEl          = document.getElementById('input-video');
+const imageEl          = document.getElementById('input-image');
+const canvasEl         = document.getElementById('output-canvas');
+const ctx              = canvasEl.getContext('2d');
+const overlayEl        = document.getElementById('status-overlay');
+const overlayIcon      = document.getElementById('overlay-icon');
+const overlayText      = document.getElementById('overlay-text');
+const badgeEl          = document.getElementById('prediction-badge');
+const downloadBtn      = document.getElementById('download-btn');
+const mainActionBtn    = document.getElementById('main-action-btn');
+const galleryEl        = document.getElementById('reference-gallery');
+const imageUploadEl    = document.getElementById('image-upload');
+const framingAlert     = document.getElementById('framing-alert');
+const countdownOverlay = document.getElementById('countdown-overlay');
+const countdownNumber  = document.getElementById('countdown-number');
+const confidenceBar    = document.getElementById('confidence-bar');
+const confidenceVal    = document.getElementById('confidence-val');
 
 // ── STATE ──
-let poseLandmarker = null;
+let poseLandmarkerImage = null;
+let poseLandmarkerVideo = null;
 let onnxSession82  = null;
 let onnxSession16  = null;
 let currentModel   = 'yoga16';
-let currentSource  = 'live';
-let featureBuffer  = [];
-let isRecording    = false;
-let mediaRecorder;
-let recordedChunks = [];
-let animationId    = null;
-let isRunning      = false;
-let lastTimestamp  = 0;
+let currentSource  = 'camera';
 let activeStream   = null;
+let animationId    = null;
+let countdownTimer = null;
+let isPreviewing   = false;
 
 // ── INIT ──
 async function init() {
@@ -81,26 +77,24 @@ async function init() {
     try {
         const u82 = base64ToUint8Array(YOGA_82_ONNX_BASE64);
         const u16 = base64ToUint8Array(YOGA_16_ONNX_BASE64);
-
         onnxSession82 = await ort.InferenceSession.create(u82);
-        setOverlay('🧠', 'Loading MediaPipe AI...', true);
-
         onnxSession16 = await ort.InferenceSession.create(u16);
 
-        const vision = await FilesetResolver.forVisionTasks(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
-        );
+        setOverlay('🧠', 'Loading MediaPipe AI...', true);
+        const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm");
 
-        poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
-            baseOptions: {
-                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
-                delegate: "CPU"
-            },
-            runningMode: "VIDEO",
-            numPoses: 1
+        // Need two modes: VIDEO (for the 5s preview countdown) and IMAGE (for final uploaded photo inference)
+        poseLandmarkerVideo = await PoseLandmarker.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task", delegate: "CPU" },
+            runningMode: "VIDEO", numPoses: 1
+        });
+        
+        poseLandmarkerImage = await PoseLandmarker.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task", delegate: "CPU" },
+            runningMode: "IMAGE", numPoses: 1
         });
 
-        setOverlay('🧘', 'Ready! Press "Start Camera" to begin.', false);
+        setOverlay('🧘', 'Ready! Select an option on the left.', false);
         overlayIcon.style.animation = 'float 3s ease-in-out infinite';
 
         setupEvents();
@@ -119,9 +113,7 @@ function setOverlay(icon, text, showLoading) {
     document.getElementById('loading-bar').style.display = showLoading ? 'block' : 'none';
 }
 
-function hideOverlay() {
-    overlayEl.style.display = 'none';
-}
+function hideOverlay() { overlayEl.style.display = 'none'; }
 
 // ── FEATURE COMPUTATION ──
 function computeAngle3D(a, b, c) {
@@ -143,23 +135,49 @@ function getPoseFeatures(landmarks) {
     return f;
 }
 
+// ── SYNTHETIC ROTATION (16 VIEWS) ──
+function generateViews(worldLandmarks) {
+    const views = [];
+    const anglesDeg = [];
+    for (let i = 0; i < 16; i++) {
+        anglesDeg.push(-180 + i * (360 / 15)); // np.linspace(-180, 180, 16)
+    }
+
+    for (let deg of anglesDeg) {
+        const theta = deg * Math.PI / 180.0;
+        const c = Math.cos(theta);
+        const s = Math.sin(theta);
+
+        // Rotate all landmarks around Y-axis
+        const rotated = [];
+        for (let i=0; i<33; i++) {
+            const pt = worldLandmarks[i];
+            const rx = pt.x * c + pt.z * s;
+            const ry = pt.y;
+            const rz = -pt.x * s + pt.z * c;
+            rotated.push({x: rx, y: ry, z: rz, visibility: pt.visibility});
+        }
+        
+        views.push(getPoseFeatures(rotated)); // 212 length array
+    }
+    return views;
+}
+
 // ── INFERENCE ──
 async function runInference(worldLandmarks) {
-    const f = getPoseFeatures(worldLandmarks);
-    featureBuffer.push(f);
-    if (featureBuffer.length > 16) featureBuffer.shift();
-
-    if (featureBuffer.length < 16) return;
-
+    // 1. Generate 16 rotated views from the single image
+    const multiViews = generateViews(worldLandmarks);
+    
+    // 2. Flatten into [1, 16, 212] tensor
     const inputBuf = new Float32Array(16 * 212);
-    for (let i=0; i<16; i++) inputBuf.set(featureBuffer[i], i*212);
+    for (let i=0; i<16; i++) inputBuf.set(multiViews[i], i*212);
 
     const tensor  = new ort.Tensor('float32', inputBuf, [1, 16, 212]);
     const session = currentModel === 'yoga16' ? onnxSession16 : onnxSession82;
     const results = await session.run({ input: tensor });
     const output  = results.output.data;
 
-    // Softmax for confidence
+    // 3. Softmax for confidence
     const maxLogit = Math.max(...output);
     const exps = Array.from(output).map(v => Math.exp(v - maxLogit));
     const sumExp = exps.reduce((a,b)=>a+b, 0);
@@ -179,308 +197,260 @@ async function runInference(worldLandmarks) {
     confidenceVal.textContent = conf + '%';
 }
 
+// ── DRAWING ──
+function drawSkeleton(screenLandmarks, W, H) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.lineWidth = Math.max(2, W / 200);
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineCap = 'round';
+    for (const [u, v] of CONNECTIONS) {
+        const pu = screenLandmarks[u], pv = screenLandmarks[v];
+        if ((pu.visibility||1) < 0.2 || (pv.visibility||1) < 0.2) continue;
+        ctx.beginPath();
+        ctx.moveTo(pu.x * W, pu.y * H);
+        ctx.lineTo(pv.x * W, pv.y * H);
+        ctx.stroke();
+    }
+
+    const r = Math.max(4, W / 150);
+    ctx.fillStyle = '#16a34a';
+    for (const p of screenLandmarks) {
+        if ((p.visibility||1) < 0.2) continue;
+        ctx.beginPath();
+        ctx.arc(p.x * W, p.y * H, r, 0, 2*Math.PI);
+        ctx.fill();
+    }
+
+    ctx.fillStyle = '#ff2244';
+    ctx.shadowColor = '#ff2244';
+    ctx.shadowBlur = 8;
+    for (const j of HIGHLIGHT_JOINTS) {
+        const p = screenLandmarks[j];
+        if ((p.visibility||1) < 0.2) continue;
+        ctx.beginPath();
+        ctx.arc(p.x * W, p.y * H, r * 1.8, 0, 2*Math.PI);
+        ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+}
+
 // ── BODY FRAMING CHECK ──
 function checkBodyFraming(landmarks) {
-    // Check visibility of key landmarks
-    const nose     = landmarks[0];
-    const leftSho  = landmarks[11];
-    const rightSho = landmarks[12];
-    const leftHip  = landmarks[23];
-    const rightHip = landmarks[24];
-    const leftAnk  = landmarks[27];
-    const rightAnk = landmarks[28];
+    const nose = landmarks[0], leftSho = landmarks[11], rightSho = landmarks[12];
+    const leftHip = landmarks[23], rightHip = landmarks[24];
+    const leftAnk = landmarks[27], rightAnk = landmarks[28];
+    const visThresh = 0.5;
 
-    const visThreshold = 0.5;
+    const faceOnly = nose.visibility > visThresh && (leftSho.visibility < visThresh || rightSho.visibility < visThresh);
+    const noLegs = (leftSho.visibility > visThresh || rightSho.visibility > visThresh) && (leftHip.visibility < visThresh || rightHip.visibility < visThresh);
+    const noFeet = (leftHip.visibility > visThresh || rightHip.visibility > visThresh) && (leftAnk.visibility < visThresh && rightAnk.visibility < visThresh);
 
-    const faceOnly = nose.visibility > visThreshold &&
-        (leftSho.visibility < visThreshold || rightSho.visibility < visThreshold);
-
-    const noLegs = (leftSho.visibility > visThreshold || rightSho.visibility > visThreshold) &&
-        (leftHip.visibility < visThreshold || rightHip.visibility < visThreshold);
-
-    const noFeet = (leftHip.visibility > visThreshold || rightHip.visibility > visThreshold) &&
-        (leftAnk.visibility < visThreshold && rightAnk.visibility < visThreshold);
-
-    if (faceOnly) {
-        showFramingAlert('📏 Please step back — show your full body');
-    } else if (noLegs) {
-        showFramingAlert('🦵 Please show full body — step further back');
-    } else if (noFeet) {
-        showFramingAlert('👣 Try to show your feet too for better accuracy');
-    } else {
-        hideFramingAlert();
-    }
+    if (faceOnly) showFramingAlert('📏 Please step back — show your full body');
+    else if (noLegs) showFramingAlert('🦵 Please show full body — step further back');
+    else if (noFeet) showFramingAlert('👣 Try to show your feet too for better accuracy');
+    else hideFramingAlert();
 }
 
-let framingTimeout = null;
-function showFramingAlert(msg) {
-    framingAlert.textContent = msg;
-    framingAlert.style.display = 'block';
-    clearTimeout(framingTimeout);
-    framingTimeout = setTimeout(hideFramingAlert, 3000);
-}
+function showFramingAlert(msg) { framingAlert.textContent = msg; framingAlert.style.display = 'block'; }
+function hideFramingAlert() { framingAlert.style.display = 'none'; }
 
-function hideFramingAlert() {
-    framingAlert.style.display = 'none';
-}
+// ── CAMERA PREVIEW LOOP ──
+async function previewLoop() {
+    if (!isPreviewing || !poseLandmarkerVideo || !videoEl.readyState) return;
 
-// ── RENDER LOOP ──
-async function renderLoop(timestamp) {
-    animationId = requestAnimationFrame(renderLoop);
-
-    if (!isRunning || !poseLandmarker || !videoEl.readyState || videoEl.readyState < 2) return;
-
-    const W = videoEl.videoWidth;
-    const H = videoEl.videoHeight;
-    if (!W || !H) return;
-
-    // Match canvas to video dimensions
-    if (canvasEl.width !== W || canvasEl.height !== H) {
-        canvasEl.width  = W;
-        canvasEl.height = H;
-    }
-
-    // For webcam use performance.now(), for video file use currentTime
-    const tsMs = performance.now();
-
-    // Throttle: only detect if enough time has passed (for video files avoid duplicate frames)
-    if (currentSource === 'video' && videoEl.currentTime === lastTimestamp) {
-        drawBlankCanvas();
-        return;
-    }
-    lastTimestamp = videoEl.currentTime;
-
-    let results;
-    try {
-        results = poseLandmarker.detectForVideo(videoEl, tsMs);
-    } catch(e) {
-        return;
-    }
-
-    // White canvas background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, H);
-
-    if (results.landmarks && results.landmarks.length > 0) {
-        const screen = results.landmarks[0];
-        const world  = results.worldLandmarks ? results.worldLandmarks[0] : null;
-
-        // Check body framing
-        checkBodyFraming(screen);
-
-        // Draw bones
-        ctx.lineWidth = Math.max(2, W / 200);
-        ctx.strokeStyle = '#dc2626';
-        ctx.lineCap = 'round';
-        for (const [u, v] of CONNECTIONS) {
-            const pu = screen[u], pv = screen[v];
-            if ((pu.visibility||1) < 0.2 || (pv.visibility||1) < 0.2) continue;
-            ctx.beginPath();
-            ctx.moveTo(pu.x * W, pu.y * H);
-            ctx.lineTo(pv.x * W, pv.y * H);
-            ctx.stroke();
+    const W = videoEl.videoWidth, H = videoEl.videoHeight;
+    if (W && H) {
+        if (canvasEl.width !== W || canvasEl.height !== H) {
+            canvasEl.width = W; canvasEl.height = H;
         }
 
-        // Draw regular joints (green)
-        const r = Math.max(4, W / 150);
-        ctx.fillStyle = '#16a34a';
-        for (const p of screen) {
-            if ((p.visibility||1) < 0.2) continue;
-            ctx.beginPath();
-            ctx.arc(p.x * W, p.y * H, r, 0, 2*Math.PI);
-            ctx.fill();
-        }
+        let results;
+        try { results = poseLandmarkerVideo.detectForVideo(videoEl, performance.now()); } catch(e) { return; }
 
-        // Highlight key joints (red, larger)
-        ctx.fillStyle = '#ff2244';
-        ctx.shadowColor = '#ff2244';
-        ctx.shadowBlur = 8;
-        for (const j of HIGHLIGHT_JOINTS) {
-            const p = screen[j];
-            if ((p.visibility||1) < 0.2) continue;
-            ctx.beginPath();
-            ctx.arc(p.x * W, p.y * H, r * 1.8, 0, 2*Math.PI);
-            ctx.fill();
+        if (results.landmarks && results.landmarks.length > 0) {
+            drawSkeleton(results.landmarks[0], W, H);
+            checkBodyFraming(results.landmarks[0]);
+        } else {
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = '#9ca3af'; ctx.font = 'bold 24px Outfit'; ctx.textAlign = 'center';
+            ctx.fillText('👤 No person detected', W/2, H/2);
+            hideFramingAlert();
         }
-        ctx.shadowBlur = 0;
-
-        // Run AI inference
-        if (world) {
-            try { await runInference(world); } catch(e) { console.warn(e); }
-        }
-
-    } else {
-        // No pose detected
-        drawNoPoseMessage(W, H);
-        hideFramingAlert();
     }
+    animationId = requestAnimationFrame(previewLoop);
 }
 
-function drawBlankCanvas() {
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
-}
-
-function drawNoPoseMessage(W, H) {
-    ctx.fillStyle = '#e5e7eb';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = `bold ${Math.max(16, W/30)}px Outfit, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText('👤 No person detected', W/2, H/2 - 20);
-    ctx.font = `${Math.max(12, W/40)}px Outfit, sans-serif`;
-    ctx.fillText('Stand in front of the camera', W/2, H/2 + 20);
-    ctx.textAlign = 'start';
-}
-
-// ── WEBCAM / VIDEO ──
-async function startWebcam() {
+// ── ACTION FLOWS ──
+async function initiateCameraCapture() {
     stopStream();
+    badgeEl.textContent = 'Previewing...';
+    
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
-        });
-        activeStream  = stream;
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { ideal: 720, facingMode: 'user' } });
+        activeStream = stream;
         videoEl.srcObject = stream;
-        videoEl.src   = '';
+        videoEl.src = '';
         await videoEl.play();
-        isRunning     = true;
-        currentSource = 'live';
-        statusDot.classList.add('live');
-        recordBtn.disabled = false;
+        
+        isPreviewing = true;
         hideOverlay();
-        startBtn.innerHTML = '<span>⏹</span> Stop Camera';
-        startBtn.classList.add('running');
-        if (!animationId) animationId = requestAnimationFrame(renderLoop);
+        mainActionBtn.disabled = true;
+        downloadBtn.disabled = true;
+        
+        if (!animationId) animationId = requestAnimationFrame(previewLoop);
+
+        // Start 5 second countdown
+        countdownOverlay.style.display = 'flex';
+        let count = 5;
+        countdownNumber.textContent = count;
+        
+        countdownTimer = setInterval(async () => {
+            count--;
+            if (count > 0) {
+                countdownNumber.textContent = count;
+            } else {
+                // Time's up! Freeze and capture.
+                clearInterval(countdownTimer);
+                countdownOverlay.style.display = 'none';
+                isPreviewing = false;
+                cancelAnimationFrame(animationId);
+                
+                await captureAndProcessWebcamFrame();
+            }
+        }, 1000);
+
     } catch(e) {
         setOverlay('🚫', `Camera error: ${e.message}`, false);
     }
 }
 
-function startVideoFile(file) {
-    stopStream();
+async function captureAndProcessWebcamFrame() {
+    const W = videoEl.videoWidth, H = videoEl.videoHeight;
+    const results = poseLandmarkerVideo.detectForVideo(videoEl, performance.now());
+    
+    // Stop the camera completely
+    if (activeStream) { activeStream.getTracks().forEach(t => t.stop()); activeStream = null; }
     videoEl.srcObject = null;
-    videoEl.src = URL.createObjectURL(file);
-    videoEl.loop = true;
-    videoEl.play();
-    isRunning     = true;
-    currentSource = 'video';
-    lastTimestamp = -1;
-    statusDot.classList.add('live');
-    recordBtn.disabled = false;
+    hideFramingAlert();
+    mainActionBtn.disabled = false;
+
+    if (results.landmarks && results.landmarks.length > 0) {
+        drawSkeleton(results.landmarks[0], W, H);
+        await runInference(results.worldLandmarks[0]);
+        downloadBtn.disabled = false;
+    } else {
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+        badgeEl.textContent = 'No Pose Found';
+        badgeEl.classList.remove('active');
+        alert("No person was detected in the final frame. Please try again.");
+    }
+}
+
+async function handleImageUpload(file) {
+    stopStream();
     hideOverlay();
-    startBtn.innerHTML = '<span>⏹</span> Stop';
-    startBtn.classList.add('running');
-    if (!animationId) animationId = requestAnimationFrame(renderLoop);
+    badgeEl.textContent = 'Analyzing...';
+    downloadBtn.disabled = true;
+
+    const url = URL.createObjectURL(file);
+    imageEl.src = url;
+    
+    imageEl.onload = async () => {
+        const W = imageEl.naturalWidth, H = imageEl.naturalHeight;
+        canvasEl.width = W; canvasEl.height = H;
+
+        // Process image directly
+        const results = poseLandmarkerImage.detect(imageEl);
+        
+        if (results.landmarks && results.landmarks.length > 0) {
+            drawSkeleton(results.landmarks[0], W, H);
+            await runInference(results.worldLandmarks[0]);
+            downloadBtn.disabled = false;
+        } else {
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+            badgeEl.textContent = 'No Pose Found';
+            badgeEl.classList.remove('active');
+            alert("No person was detected in the uploaded image.");
+        }
+    };
 }
 
 function stopStream() {
-    isRunning = false;
-    statusDot.classList.remove('live');
-    recordBtn.disabled = true;
-    featureBuffer = [];
+    isPreviewing = false;
+    cancelAnimationFrame(animationId);
+    clearInterval(countdownTimer);
+    countdownOverlay.style.display = 'none';
+    hideFramingAlert();
+    
+    if (activeStream) { activeStream.getTracks().forEach(t => t.stop()); activeStream = null; }
+    videoEl.srcObject = null;
+    
     badgeEl.textContent = 'Waiting for input...';
     badgeEl.classList.remove('active');
     confidenceBar.style.width = '0%';
     confidenceVal.textContent = '--';
-    if (activeStream) {
-        activeStream.getTracks().forEach(t => t.stop());
-        activeStream = null;
-    }
-    videoEl.srcObject = null;
-    videoEl.src = '';
-    hideFramingAlert();
-}
-
-// ── RECORDING ──
-function toggleRecording() {
-    if (isRecording) {
-        mediaRecorder.stop();
-        recordBtn.innerHTML = '<span class="icon">⏺</span> Record';
-        recordBtn.classList.remove('recording');
-        isRecording = false;
-    } else {
-        const stream = canvasEl.captureStream(25);
-        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-            ? 'video/webm;codecs=vp9' : 'video/webm';
-        mediaRecorder  = new MediaRecorder(stream, { mimeType });
-
-        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            recordedChunks = [];
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `dualpose_skeleton_${currentModel}.webm`; a.click();
-        };
-
-        mediaRecorder.start(100);
-        recordBtn.innerHTML = '<span class="icon">⏹</span> Stop & Save';
-        recordBtn.classList.add('recording');
-        isRecording = true;
-    }
+    downloadBtn.disabled = true;
+    mainActionBtn.disabled = false;
 }
 
 // ── EVENTS ──
 function setupEvents() {
-    // Model selection
     document.querySelectorAll('input[name="model"]').forEach(r => {
         r.addEventListener('change', e => {
-            document.querySelectorAll('.radio-card').forEach(c => {
-                if (c.querySelector('input[name="model"]')) c.classList.remove('active');
-            });
+            document.querySelectorAll('input[name="model"]').forEach(i => i.closest('.radio-card').classList.remove('active'));
             e.target.closest('.radio-card').classList.add('active');
-            currentModel  = e.target.value;
-            featureBuffer = [];
+            currentModel = e.target.value;
             populateGallery();
-            badgeEl.textContent = 'Model switched...';
-            badgeEl.classList.remove('active');
+            stopStream();
+            ctx.clearRect(0,0, canvasEl.width, canvasEl.height);
         });
     });
 
-    // Source selection
     document.querySelectorAll('input[name="input-source"]').forEach(r => {
         r.addEventListener('change', e => {
-            document.querySelectorAll('.radio-card').forEach(c => {
-                if (c.querySelector('input[name="input-source"]')) c.classList.remove('active');
-            });
+            document.querySelectorAll('input[name="input-source"]').forEach(i => i.closest('.radio-card').classList.remove('active'));
             e.target.closest('.radio-card').classList.add('active');
             currentSource = e.target.value;
+            stopStream();
+            ctx.clearRect(0,0, canvasEl.width, canvasEl.height);
+            
+            if (currentSource === 'camera') {
+                mainActionBtn.innerHTML = '<span>📸</span> Start Camera (5s Delay)';
+                mainActionBtn.classList.remove('uploading');
+            } else {
+                mainActionBtn.innerHTML = '<span>🖼️</span> Select Photo to Upload';
+                mainActionBtn.classList.add('uploading');
+            }
         });
     });
 
-    // Start button
-    startBtn.addEventListener('click', () => {
-        if (isRunning) {
-            stopStream();
-            startBtn.innerHTML = '<span>▶</span> Start Camera';
-            startBtn.classList.remove('running');
-            setOverlay('🧘', 'Ready! Press "Start Camera" to begin.', false);
+    mainActionBtn.addEventListener('click', () => {
+        if (currentSource === 'camera') {
+            initiateCameraCapture();
         } else {
-            if (currentSource === 'live') {
-                startWebcam();
-            } else {
-                videoUploadEl.click();
-            }
+            imageUploadEl.click();
         }
     });
 
-    // Video file upload
-    videoUploadEl.addEventListener('change', e => {
-        if (e.target.files.length > 0) startVideoFile(e.target.files[0]);
+    imageUploadEl.addEventListener('change', e => {
+        if (e.target.files.length > 0) handleImageUpload(e.target.files[0]);
     });
 
-    // Record button
-    recordBtn.addEventListener('click', toggleRecording);
+    downloadBtn.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = `skeleton_result_${currentModel}.png`;
+        link.href = canvasEl.toDataURL('image/png');
+        link.click();
+    });
 }
 
 // ── GALLERY ──
 function populateGallery() {
     galleryEl.innerHTML = '';
-    const gcDiv = document.getElementById('gallery-container');
-
     if (currentModel === 'yoga16') {
-        gcDiv.style.display = 'block';
+        document.getElementById('gallery-container').style.display = 'block';
         YOGA_16_REFS.forEach(ref => {
             const card = document.createElement('div');
             card.className = 'pose-card';
@@ -489,11 +459,10 @@ function populateGallery() {
             galleryEl.appendChild(card);
         });
     } else {
-        gcDiv.style.display = 'none';
+        document.getElementById('gallery-container').style.display = 'none';
     }
 }
 
-// ── UTILITIES ──
 function base64ToUint8Array(b64) {
     const bin = atob(b64);
     const buf = new Uint8Array(bin.length);
@@ -501,5 +470,4 @@ function base64ToUint8Array(b64) {
     return buf;
 }
 
-// ── BOOT ──
 window.addEventListener('load', init);
